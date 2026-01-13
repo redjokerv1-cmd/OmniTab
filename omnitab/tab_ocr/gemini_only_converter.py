@@ -160,12 +160,17 @@ class GeminiOnlyConverter:
         song.artist = "OmniTab (Gemini Only)"
         song.tempo = tempo
         
+        # Add capo info to instructions (since track.offset doesn't persist)
+        if capo > 0:
+            song.instructions = f"Capo: {capo} fret"
+        
         # Create track
         track = gp.Track(song)
-        track.name = "Guitar"
+        track.name = "Acoustic Guitar"
         track.channel = self._create_channel()
         track.strings = self._create_strings(tuning)
         track.fretCount = 24
+        track.offset = capo  # Capo setting! This is the correct way
         
         # Process measures
         for i, m_data in enumerate(measures_data):
@@ -320,18 +325,23 @@ class GeminiOnlyConverter:
         return strings
     
     def _apply_technique(self, note: gp.Note, technique: str):
-        """Apply technique effect to note"""
+        """Apply technique effect to note (comprehensive implementation)"""
         if not technique:
             return
         
         tech_lower = technique.lower()
         
+        # Hammer-on / Pull-off (H/P)
         if 'hammer' in tech_lower or tech_lower == 'h':
             note.effect.hammer = True
         elif 'pull' in tech_lower or tech_lower == 'p':
-            note.effect.hammer = True  # GP5 uses same flag
-        elif 'slide' in tech_lower or tech_lower in ['/', '\\']:
-            note.effect.slide = True
+            note.effect.hammer = True  # GP5 uses same flag for H/P
+        
+        # Slide
+        elif 'slide' in tech_lower or tech_lower in ['/', '\\', 's']:
+            note.effect.slides = [gp.SlideType.shiftSlide]
+        
+        # Bend
         elif 'bend' in tech_lower or tech_lower == 'b':
             note.effect.bend = gp.BendEffect(
                 type=gp.BendType.bend,
@@ -342,8 +352,26 @@ class GeminiOnlyConverter:
                     gp.BendPoint(12, 100)
                 ]
             )
+        
+        # Vibrato
         elif 'vibrato' in tech_lower or tech_lower == 'v':
             note.effect.vibrato = True
+        
+        # Natural Harmonic
+        elif 'harmonic' in tech_lower or 'harm' in tech_lower:
+            note.effect.harmonic = gp.NaturalHarmonic()
+        
+        # Let Ring
+        elif 'let ring' in tech_lower or 'ring' in tech_lower:
+            note.effect.letRing = True
+        
+        # Palm Mute
+        elif 'palm' in tech_lower or 'mute' in tech_lower or tech_lower == 'pm':
+            note.effect.palmMute = True
+        
+        # Staccato
+        elif 'staccato' in tech_lower:
+            note.effect.staccato = True
 
 
 # Quick test
