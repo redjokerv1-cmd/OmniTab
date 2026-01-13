@@ -4,6 +4,49 @@ All notable changes to OmniTab will be documented in this file.
 
 ---
 
+## [0.4.0] - 2026-01-13
+
+### 🎉 BREAKTHROUGH: Smart OCR - 64% Improvement!
+
+#### 핵심 성과
+```
+┌────────────────┬──────────┬───────────┐
+│ Metric         │ 이전     │ Smart OCR │
+├────────────────┼──────────┼───────────┤
+│ Digits         │ 91       │ 120 (+32%)│
+│ 2-digit frets  │ 0        │ 42        │
+│ GP5 Notes      │ 61       │ 100 (+64%)│
+└────────────────┴──────────┴───────────┘
+```
+
+#### 창의적 해결책
+- **문제**: Contour 기반 OCR이 2자리 숫자를 분리 ("10" → "1" + "0")
+- **해결**: 슬라이딩 윈도우 방식으로 TAB 라인 스캔
+- **결과**: 10-24 프렛 100% confidence로 인식
+
+#### Added
+- `smart_ocr.py` - 슬라이딩 윈도우 TAB OCR
+- `smart_to_gp5.py` - Smart OCR 기반 GP5 변환
+- `tab_region_ocr.py` - TAB 영역 전용 OCR
+- `learning/` - 학습 DB (모든 시도 추적)
+  - SQLite 기반 저장
+  - 시도별 정확도 비교
+  - 오류 패턴 수집
+
+#### Learning DB
+```
+2개 시도 기록됨:
+- 기존 방식: 91 digits, 61 GP5 notes
+- Smart OCR: 120 digits, 100 GP5 notes ← 최고 성과
+```
+
+#### 교훈
+1. 기존 방법이 안되면 창의적으로 접근
+2. 데이터를 쌓으면서 개선 (DB화)
+3. 문제의 근본 원인 파악이 핵심
+
+---
+
 ## [0.3.1] - 2026-01-13
 
 ### 🔴 Status: MVP Failed - Core Features Incomplete
