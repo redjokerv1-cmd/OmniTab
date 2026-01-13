@@ -2,6 +2,42 @@
 
 All notable changes to OmniTab will be documented in this file.
 
+## [0.3.0] - 2026-01-13
+
+### 🚀 Major: Complete TAB Image to GP5 Pipeline
+
+#### Added
+- **OcrToGp5Converter** (`ocr_to_gp5.py`)
+  - Full pipeline: TAB image → GP5 file
+  - Custom tuning support (6 note names)
+  - Capo position support
+  - Auto-detect or manual override
+
+#### Usage
+```python
+from omnitab.tab_ocr.ocr_to_gp5 import convert_tab_to_gp5
+
+result = convert_tab_to_gp5(
+    image_path="tab.png",
+    output_path="output.gp5",
+    title="Song Name",
+    tempo=120,
+    tuning=['E', 'C', 'G', 'D', 'G', 'C'],  # Optional
+    capo=2  # Optional
+)
+```
+
+#### Yellow Jacket Test
+```
+Input:  page_1.png
+Output: yellow_jacket_correct.gp5
+Beats:  86
+Tuning: E C G D G C (alternate)
+Capo:   2
+```
+
+---
+
 ## [0.2.2] - 2026-01-13
 
 ### ✨ Feature: Auto-detect Tuning & Capo
