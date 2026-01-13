@@ -2,9 +2,43 @@
 
 All notable changes to OmniTab will be documented in this file.
 
+---
+
+## [0.3.1] - 2026-01-13
+
+### 🔴 Status: MVP Failed - Core Features Incomplete
+
+#### 문서화
+- `docs/CURRENT_STATUS.md` - 현재 상태 솔직한 분석
+- `docs/ARCHITECTURE.md` - 실제 아키텍처 (작동/실패 표시)
+- `README.md` - 현실적으로 업데이트
+
+#### 핵심 실패 원인
+```
+❌ TAB 6줄 감지: 1/3만 성공
+❌ 줄 번호 매핑: 정확도 ~20%
+❌ 마디 구분: 노이즈 문제
+❌ GP5 생성: 사용 불가
+```
+
+#### 작동하는 부분
+```
+✅ 숫자 OCR: 148개, 80%
+✅ 카포 감지: 100%
+✅ 가로줄 제거: 작동
+✅ GP5Writer (MIDI 기반): 작동
+```
+
+#### 교훈
+1. TAB 구조 파싱은 단순 OCR로 불가능
+2. 6줄 감지가 핵심 (없으면 모든 게 틀림)
+3. 반자동 접근이 현실적
+
+---
+
 ## [0.3.0] - 2026-01-13
 
-### 🚀 Major: Complete TAB Image to GP5 Pipeline
+### 🚀 Major: Complete TAB Image to GP5 Pipeline (❌ 실패)
 
 #### Added
 - **OcrToGp5Converter** (`ocr_to_gp5.py`)
