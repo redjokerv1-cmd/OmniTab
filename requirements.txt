@@ -7,6 +7,12 @@ Pillow>=10.0.0
 # OMR (Python alternative to Audiveris)
 oemer>=0.1.0
 
+# TAB OCR
+opencv-python>=4.9.0
+easyocr>=1.7.0
+PyMuPDF>=1.23.0
+numpy>=1.24.0
+
 # Web API
 fastapi>=0.110.0
 uvicorn>=0.27.0
