@@ -2,6 +2,31 @@
 
 All notable changes to OmniTab will be documented in this file.
 
+## [0.2.2] - 2026-01-13
+
+### ✨ Feature: Auto-detect Tuning & Capo
+
+#### Added
+- **HeaderDetector** (`header_detector.py`)
+  - Scans image header for tuning/capo info
+  - Detects: `①=E ②=C` format, `Tuning: DADGAD` format
+  - Detects: `Capo. fret 2` or `Capo 3`
+  - Flags non-standard tuning for manual verification
+
+#### Results (Yellow Jacket test)
+```
+Tuning: ['E', 'C', 'G', '?', '?', '?']  ← Partial detection
+Capo: 2 ✅
+Standard: False ✅
+[!] Alternate tuning - manual verification recommended
+```
+
+#### Integration
+- EnhancedTabOCR now includes header detection
+- Result dict contains `header` with tuning/capo info
+
+---
+
 ## [0.2.1] - 2026-01-13
 
 ### 🔧 Fix: Chord Grouping Problem

@@ -21,6 +21,13 @@ try:
 except ImportError:
     easyocr = None
 
+# Import header detector
+try:
+    from .header_detector import HeaderDetector, HeaderInfo
+except ImportError:
+    HeaderDetector = None
+    HeaderInfo = None
+
 
 @dataclass
 class RecognizedDigit:
@@ -107,11 +114,19 @@ class EnhancedTabOCR:
         self.x_threshold = x_threshold
         self.y_gap_threshold = y_gap_threshold
         self.use_gpu = use_gpu
+        self.detect_header = True  # Auto-detect tuning/capo
         
         self._reader = None
+        self._header_detector = None
         
         if cv2 is None:
             raise ImportError("OpenCV required: pip install opencv-python")
+    
+    @property
+    def header_detector(self):
+        if self._header_detector is None and HeaderDetector is not None:
+            self._header_detector = HeaderDetector(use_gpu=self.use_gpu)
+        return self._header_detector
     
     @property
     def reader(self):
@@ -165,7 +180,15 @@ class EnhancedTabOCR:
         avg_conf = sum(d.confidence for d in digits) / max(len(digits), 1)
         problems = sum(1 for s in systems for c in s.chords if len(c.notes) > 6)
         
-        return {
+        # Detect header (tuning, capo)
+        header_info = None
+        if self.detect_header and self.header_detector:
+            try:
+                header_info = self.header_detector.detect(image)
+            except Exception:
+                pass
+        
+        result = {
             'digits': digits,
             'systems': systems,
             'stats': {
@@ -176,6 +199,18 @@ class EnhancedTabOCR:
                 'problems': problems
             }
         }
+        
+        if header_info:
+            result['header'] = {
+                'tuning': header_info.tuning,
+                'capo': header_info.capo,
+                'tempo': header_info.tempo,
+                'time_signature': header_info.time_signature,
+                'is_standard_tuning': header_info.is_standard_tuning,
+                'needs_manual_tuning': header_info.needs_manual_tuning
+            }
+        
+        return result
     
     def _remove_lines(self, gray: np.ndarray) -> np.ndarray:
         """Remove horizontal staff lines"""
@@ -347,6 +382,16 @@ if __name__ == '__main__':
     print(f"Chords: {stats['total_chords']}")
     print(f"Confidence: {stats['avg_confidence']:.1%}")
     print(f"Problems: {stats['problems']}")
+    
+    if 'header' in result:
+        h = result['header']
+        print()
+        print("Header Info:")
+        print(f"  Tuning: {h['tuning']}")
+        print(f"  Capo: {h['capo']}")
+        print(f"  Standard: {h['is_standard_tuning']}")
+        if h['needs_manual_tuning']:
+            print("  [!] Alternate tuning - manual verification recommended")
     print()
     
     for i, system in enumerate(result['systems']):
