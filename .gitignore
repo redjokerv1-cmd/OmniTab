@@ -39,8 +39,12 @@ tmp/
 
 # Output
 output/
+outputs/
 *.gp5
 *.gpx
+
+# Uploads (API temp files)
+uploads/
 
 # Logs
 *.log
