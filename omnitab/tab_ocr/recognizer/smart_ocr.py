@@ -152,6 +152,9 @@ class SmartTabOCR:
                 if conf >= self.min_confidence and text:
                     try:
                         value = int(text)
+                        # High frets (19+) require higher confidence
+                        if value >= 19 and conf < 0.7:
+                            continue
                         if 0 <= value <= 24:
                             # Calculate center X
                             bbox = result[0]

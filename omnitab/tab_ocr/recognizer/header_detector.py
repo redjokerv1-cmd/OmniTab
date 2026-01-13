@@ -86,6 +86,9 @@ class HeaderDetector:
         # Tuning: "Tuning: DADGAD" or "Tuning: D A D G A D"
         'tuning_named': re.compile(r'[Tt]uning[:\s]+([A-Ga-g#b♯♭\s]{6,})', re.IGNORECASE),
         
+        # Tuning: "D=E" style (Drop tuning notation)
+        'tuning_drop': re.compile(r'([A-Ga-g])\s*=\s*([A-Ga-g][#b♯♭]?)', re.IGNORECASE),
+        
         # Capo: "Capo fret 2", "Capo. 3", "Capo 2nd"
         'capo': re.compile(r'[Cc]apo\.?\s*(?:fret\s*)?(\d+)', re.IGNORECASE),
         
@@ -186,6 +189,27 @@ class HeaderDetector:
             # If we got all 6, return them
             if all(t is not None for t in tuning):
                 return tuning
+        
+        # Try "D=E" drop tuning pattern
+        drop_matches = self.PATTERNS['tuning_drop'].findall(text)
+        if drop_matches:
+            # Standard tuning as base
+            standard_notes = ['E', 'B', 'G', 'D', 'A', 'E']
+            result = standard_notes.copy()
+            
+            for from_note, to_note in drop_matches:
+                from_note = from_note.upper()
+                to_note = to_note.upper()
+                
+                # Find which string has this note and replace
+                for i, note in enumerate(standard_notes):
+                    if note == from_note:
+                        result[i] = to_note
+                        break
+            
+            # Check if any change was made
+            if result != standard_notes:
+                return result
         
         # Try "=Note" pattern (when numbers are not recognized)
         # e.g., OCR returns "=E =C =G =D =G =C" separately
