@@ -1,0 +1,26 @@
+# Core
+PyGuitarPro>=0.9.0
+music21>=9.0.0
+pdf2image>=1.17.0
+Pillow>=10.0.0
+
+# OMR (Python alternative to Audiveris)
+oemer>=0.1.0
+
+# Web API
+fastapi>=0.110.0
+uvicorn>=0.27.0
+python-multipart>=0.0.9
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+alembic>=1.13.0
+
+# AI (low confidence fallback)
+google-generativeai>=0.4.0
+
+# Dev
+pytest>=8.0.0
+black>=24.0.0
+ruff>=0.2.0

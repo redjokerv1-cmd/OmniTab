@@ -1,0 +1,207 @@
+{
+  "version": "1.0.0",
+  "chords": {
+    "major": {
+      "aliases": ["", "maj", "M"],
+      "confidence": 0.95
+    },
+    "minor": {
+      "aliases": ["m", "min", "-"],
+      "confidence": 0.95
+    },
+    "major-seventh": {
+      "aliases": ["maj7", "M7", "△7", "Δ7", "ma7"],
+      "confidence": 0.92
+    },
+    "minor-seventh": {
+      "aliases": ["m7", "-7", "min7", "mi7"],
+      "confidence": 0.92
+    },
+    "dominant-seventh": {
+      "aliases": ["7", "dom7"],
+      "confidence": 0.94
+    },
+    "diminished": {
+      "aliases": ["dim", "o", "°", "dim7"],
+      "confidence": 0.90
+    },
+    "half-diminished": {
+      "aliases": ["m7b5", "ø", "ø7", "-7b5"],
+      "confidence": 0.88
+    },
+    "augmented": {
+      "aliases": ["+", "aug", "#5"],
+      "confidence": 0.90
+    },
+    "suspended-second": {
+      "aliases": ["sus2", "2"],
+      "confidence": 0.93
+    },
+    "suspended-fourth": {
+      "aliases": ["sus4", "sus", "4"],
+      "confidence": 0.93
+    },
+    "add9": {
+      "aliases": ["add9", "add2", "(add9)"],
+      "confidence": 0.88
+    },
+    "major-ninth": {
+      "aliases": ["maj9", "M9", "△9"],
+      "confidence": 0.87
+    },
+    "minor-ninth": {
+      "aliases": ["m9", "-9", "min9"],
+      "confidence": 0.87
+    },
+    "dominant-ninth": {
+      "aliases": ["9", "dom9"],
+      "confidence": 0.89
+    },
+    "sixth": {
+      "aliases": ["6", "maj6", "add6"],
+      "confidence": 0.90
+    },
+    "minor-sixth": {
+      "aliases": ["m6", "-6", "min6"],
+      "confidence": 0.90
+    }
+  },
+  "effects": {
+    "bend": {
+      "text_patterns": ["b", "^", "/bend", "bn"],
+      "regex": "^(\\d+)[bB^](\\d+)$",
+      "gp5_attr": "bend",
+      "confidence": 0.88
+    },
+    "slide_up": {
+      "text_patterns": ["/", "s", "S", "sl"],
+      "regex": "^(\\d+)[/sS](\\d+)$",
+      "gp5_attr": "slides",
+      "confidence": 0.85
+    },
+    "slide_down": {
+      "text_patterns": ["\\\\", "\\\\s"],
+      "regex": "^(\\d+)[\\\\](\\d+)$",
+      "gp5_attr": "slides",
+      "confidence": 0.85
+    },
+    "hammer_on": {
+      "text_patterns": ["h", "H", "ho"],
+      "regex": "^(\\d+)[hH](\\d+)$",
+      "gp5_attr": "hammer",
+      "confidence": 0.90
+    },
+    "pull_off": {
+      "text_patterns": ["p", "P", "po"],
+      "regex": "^(\\d+)[pP](\\d+)$",
+      "gp5_attr": "hammer",
+      "confidence": 0.90
+    },
+    "vibrato": {
+      "text_patterns": ["~", "vib", "v"],
+      "regex": "^(\\d+)[~]$",
+      "gp5_attr": "vibrato",
+      "confidence": 0.88
+    },
+    "palm_mute": {
+      "text_patterns": ["PM", "P.M.", "pm", "x"],
+      "regex": "^PM\\.?$",
+      "gp5_attr": "palmMute",
+      "confidence": 0.93
+    },
+    "ghost_note": {
+      "text_patterns": ["()", "ghost", "gn"],
+      "regex": "^\\((\\d+)\\)$",
+      "gp5_attr": "ghostNote",
+      "confidence": 0.92
+    },
+    "dead_note": {
+      "text_patterns": ["x", "X", "mute", "dm"],
+      "regex": "^[xX]$",
+      "gp5_attr": "type",
+      "gp5_value": "dead",
+      "confidence": 0.95
+    },
+    "natural_harmonic": {
+      "text_patterns": ["<>", "NH", "harm"],
+      "regex": "^<(\\d+)>$",
+      "gp5_attr": "harmonic",
+      "confidence": 0.90
+    },
+    "artificial_harmonic": {
+      "text_patterns": ["AH", "art.harm"],
+      "regex": "^(\\d+)\\[AH\\]$",
+      "gp5_attr": "harmonic",
+      "confidence": 0.88
+    },
+    "tapping": {
+      "text_patterns": ["T", "tap"],
+      "regex": "^T(\\d+)$",
+      "gp5_attr": "slapEffect",
+      "gp5_value": "tapping",
+      "confidence": 0.87
+    },
+    "slap": {
+      "text_patterns": ["slap", "SL"],
+      "gp5_attr": "slapEffect",
+      "gp5_value": "slapping",
+      "confidence": 0.85
+    },
+    "pop": {
+      "text_patterns": ["pop", "PO"],
+      "gp5_attr": "slapEffect",
+      "gp5_value": "popping",
+      "confidence": 0.85
+    },
+    "let_ring": {
+      "text_patterns": ["let ring", "LR", "ring"],
+      "gp5_attr": "letRing",
+      "confidence": 0.90
+    },
+    "staccato": {
+      "text_patterns": [".", "stac"],
+      "gp5_attr": "staccato",
+      "confidence": 0.88
+    },
+    "accent": {
+      "text_patterns": [">", "acc"],
+      "gp5_attr": "accentuatedNote",
+      "confidence": 0.89
+    },
+    "heavy_accent": {
+      "text_patterns": ["^", "sfz", "marcato"],
+      "gp5_attr": "heavyAccentuatedNote",
+      "confidence": 0.87
+    }
+  },
+  "tunings": {
+    "standard": {
+      "strings": [64, 59, 55, 50, 45, 40],
+      "name": "E A D G B E"
+    },
+    "drop_d": {
+      "strings": [64, 59, 55, 50, 45, 38],
+      "name": "D A D G B E"
+    },
+    "half_step_down": {
+      "strings": [63, 58, 54, 49, 44, 39],
+      "name": "Eb Ab Db Gb Bb Eb"
+    },
+    "full_step_down": {
+      "strings": [62, 57, 53, 48, 43, 38],
+      "name": "D G C F A D"
+    },
+    "open_g": {
+      "strings": [62, 59, 55, 50, 43, 38],
+      "name": "D G D G B D"
+    },
+    "open_d": {
+      "strings": [62, 57, 50, 50, 45, 38],
+      "name": "D A D F# A D"
+    },
+    "dadgad": {
+      "strings": [62, 57, 55, 50, 45, 38],
+      "name": "D A D G A D"
+    }
+  }
+}
