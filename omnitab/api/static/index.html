@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniTab - TAB to Guitar Pro Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --border: #2a2a3a;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at top, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .upload-zone {
+            background: var(--bg-card);
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-hint {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .option-group {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .option-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .option-group input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        .option-group input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 52px;
+            height: 28px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-secondary);
+            border-radius: 28px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background: var(--accent);
+        }
+
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+            background: white;
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .convert-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px var(--accent-glow);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 1px solid var(--border);
+            display: none;
+        }
+
+        .result-card.show {
+            display: block;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-status {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .result-status.success {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .result-status.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .result-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #16a34a;
+        }
+
+        .file-preview {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .file-preview img {
+            max-width: 120px;
+            max-height: 80px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .file-size {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .file-remove {
+            background: var(--error);
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        @media (max-width: 600px) {
+            .options {
+                grid-template-columns: 1fr;
+            }
+            .result-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="logo">🎸 OmniTab</h1>
+            <p class="tagline">TAB 이미지를 Guitar Pro 파일로 변환</p>
+        </header>
+
+        <div class="upload-zone" id="dropZone">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">TAB 이미지를 드래그하거나 클릭하여 업로드</div>
+            <div class="upload-hint">PNG, JPG, PDF 지원 • 여러 파일 선택 가능</div>
+            <input type="file" id="fileInput" accept="image/*,.pdf" multiple hidden>
+        </div>
+
+        <div id="fileList"></div>
+
+        <div class="options">
+            <div class="option-group">
+                <label for="title">곡 제목</label>
+                <input type="text" id="title" placeholder="예: Yellow Jacket" value="My Song">
+            </div>
+            <div class="option-group">
+                <label>리듬 분석</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle">
+                        <input type="checkbox" id="useGemini" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Gemini AI 사용</span>
+                </div>
+            </div>
+        </div>
+
+        <button class="convert-btn" id="convertBtn" disabled>
+            <span>🎵</span>
+            <span>변환 시작</span>
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>변환 중... 잠시 기다려주세요</div>
+        </div>
+
+        <div class="result-card" id="resultCard">
+            <div class="result-header">
+                <div class="result-status success" id="resultStatus">✓</div>
+                <div class="result-title" id="resultTitle">변환 완료!</div>
+            </div>
+            <div class="result-stats">
+                <div class="stat">
+                    <div class="stat-value" id="statMeasures">0</div>
+                    <div class="stat-label">마디</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statNotes">0</div>
+                    <div class="stat-label">노트</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statRhythm">-</div>
+                    <div class="stat-label">리듬</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statCapo">0</div>
+                    <div class="stat-label">카포</div>
+                </div>
+            </div>
+            <button class="download-btn" id="downloadBtn">
+                <span>⬇️</span>
+                <span>GP5 다운로드</span>
+            </button>
+        </div>
+    </div>
+
+    <footer>
+        <p>Made with 💜 by <a href="https://github.com/redjokerv1-cmd/OmniTab" target="_blank">OmniTab</a></p>
+        <p>OCR 정확도: 93.8% • Gemini 2.5 Flash</p>
+    </footer>
+
+    <script>
+        const API_URL = window.location.origin;
+        
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const convertBtn = document.getElementById('convertBtn');
+        const loading = document.getElementById('loading');
+        const resultCard = document.getElementById('resultCard');
+        
+        let files = [];
+        let currentJobId = null;
+
+        // Drag and drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(newFiles) {
+            files = [...files, ...Array.from(newFiles)];
+            renderFileList();
+            convertBtn.disabled = files.length === 0;
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = files.map((file, i) => `
+                <div class="file-preview">
+                    <img src="${URL.createObjectURL(file)}" alt="${file.name}">
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatSize(file.size)}</div>
+                    </div>
+                    <button class="file-remove" onclick="removeFile(${i})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            files.splice(index, 1);
+            renderFileList();
+            convertBtn.disabled = files.length === 0;
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Convert
+        convertBtn.addEventListener('click', async () => {
+            if (files.length === 0) return;
+            
+            convertBtn.disabled = true;
+            loading.classList.add('show');
+            resultCard.classList.remove('show');
+            
+            try {
+                const formData = new FormData();
+                
+                if (files.length === 1) {
+                    // Single file
+                    formData.append('file', files[0]);
+                    formData.append('title', document.getElementById('title').value);
+                    formData.append('use_gemini', document.getElementById('useGemini').checked);
+                    
+                    const response = await fetch(`${API_URL}/convert`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) throw new Error('Conversion failed');
+                    
+                    const result = await response.json();
+                    showResult(result);
+                } else {
+                    // Batch
+                    files.forEach(f => formData.append('files', f));
+                    formData.append('title', document.getElementById('title').value);
+                    formData.append('use_gemini', document.getElementById('useGemini').checked);
+                    
+                    const response = await fetch(`${API_URL}/convert/batch`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) throw new Error('Batch conversion failed');
+                    
+                    const result = await response.json();
+                    showBatchResult(result);
+                }
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.classList.remove('show');
+                convertBtn.disabled = false;
+            }
+        });
+
+        function showResult(result) {
+            currentJobId = result.job_id;
+            
+            document.getElementById('statMeasures').textContent = result.measures;
+            document.getElementById('statNotes').textContent = result.notes;
+            document.getElementById('statRhythm').textContent = result.rhythm_source === 'gemini' ? 'AI' : 'Basic';
+            document.getElementById('statCapo').textContent = result.capo;
+            
+            document.getElementById('resultStatus').textContent = '✓';
+            document.getElementById('resultStatus').className = 'result-status success';
+            document.getElementById('resultTitle').textContent = '변환 완료!';
+            
+            resultCard.classList.add('show');
+        }
+
+        function showBatchResult(result) {
+            document.getElementById('statMeasures').textContent = result.pages;
+            document.getElementById('statNotes').textContent = result.total_notes;
+            document.getElementById('statRhythm').textContent = 'Batch';
+            document.getElementById('statCapo').textContent = '-';
+            
+            document.getElementById('resultStatus').textContent = '✓';
+            document.getElementById('resultStatus').className = 'result-status success';
+            document.getElementById('resultTitle').textContent = `${result.pages}페이지 변환 완료!`;
+            
+            // Batch doesn't have single download yet
+            document.getElementById('downloadBtn').style.display = 'none';
+            
+            resultCard.classList.add('show');
+        }
+
+        function showError(message) {
+            document.getElementById('resultStatus').textContent = '✕';
+            document.getElementById('resultStatus').className = 'result-status error';
+            document.getElementById('resultTitle').textContent = '변환 실패: ' + message;
+            
+            document.getElementById('downloadBtn').style.display = 'none';
+            resultCard.classList.add('show');
+        }
+
+        // Download
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (currentJobId) {
+                window.location.href = `${API_URL}/download/${currentJobId}`;
+            }
+        });
+    </script>
+</body>
+</html>

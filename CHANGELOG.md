@@ -4,6 +4,71 @@ All notable changes to OmniTab will be documented in this file.
 
 ---
 
+## [0.5.0] - 2026-01-13
+
+### 🚀 Backend Complete: REST API + Frontend + Batch Processing
+
+#### Added
+- **FastAPI REST API** (`omnitab/api/main.py`)
+  - `POST /convert` - 단일 이미지 변환
+  - `POST /convert/batch` - 여러 페이지 일괄 변환
+  - `GET /status` - API 상태 확인
+  - `GET /history` - 변환 이력 조회
+  - `GET /download/{job_id}` - GP5 파일 다운로드
+  - `DELETE /cleanup` - 임시 파일 정리
+
+- **Frontend Web UI** (`omnitab/api/static/index.html`)
+  - 드래그 앤 드롭 업로드
+  - 실시간 변환 결과 표시
+  - Gemini AI 리듬 분석 토글
+  - 다크 테마 모던 UI
+
+- **Batch Converter** (`omnitab/tab_ocr/batch_converter.py`)
+  - 여러 페이지 자동 변환
+  - 단일 GP5 파일로 병합
+  - 진행률 추적
+
+#### API Test Results
+```
+Status: healthy
+Gemini: True
+
+Conversion Test (page_1.png):
+  Job ID: 6bfcc44c
+  Status: completed
+  Measures: 6
+  Notes: 316
+  Rhythm: gemini
+  Tuning: ['C', 'B', 'G', 'D', 'A', 'E']
+  Capo: 2
+```
+
+#### Usage
+```bash
+# Start API server
+uvicorn omnitab.api.main:app --reload
+
+# Access
+Frontend: http://localhost:8000
+API Docs: http://localhost:8000/docs
+```
+
+#### Progress
+```
+┌─────────────────────────────────────────────────────────┐
+│  ✅ Smart OCR (93.8%)                                   │
+│  ✅ Gemini Rhythm Analysis                              │
+│  ✅ REST API (7 endpoints)                              │
+│  ✅ Web Frontend (HTML/JS SPA)                          │
+│  ✅ Batch Processing (merge support)                    │
+│  ✅ Learning DB (SQLite)                                │
+├─────────────────────────────────────────────────────────┤
+│  Backend: 100% Complete                                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## [0.4.0] - 2026-01-13
 
 ### 🎉 BREAKTHROUGH: Smart OCR - 64% Improvement!
