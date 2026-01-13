@@ -233,8 +233,27 @@ class CompleteConverter:
                 notes = []
                 for gem_note in gem_beat.get("notes", []):
                     string = gem_note.get("string")
-                    fret = gem_note.get("fret")
+                    fret_raw = gem_note.get("fret")
                     technique = gem_note.get("technique")
+                    
+                    # Handle 'X' (muted string) and other non-numeric frets
+                    if isinstance(fret_raw, str):
+                        if fret_raw.upper() == 'X':
+                            # Muted note - skip for now (GP5 handles this differently)
+                            continue
+                        try:
+                            fret = int(fret_raw)
+                        except ValueError:
+                            # Skip invalid fret values
+                            continue
+                    elif fret_raw is None:
+                        continue
+                    else:
+                        fret = int(fret_raw)
+                    
+                    # Validate fret range
+                    if not (0 <= fret <= 24):
+                        continue
                     
                     # Find matching OCR note for confidence
                     ocr_match = self._find_ocr_match(ocr_notes, string, fret)

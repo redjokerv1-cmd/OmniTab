@@ -363,6 +363,10 @@
             display: none;
             text-align: center;
             padding: 2rem;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            margin-top: 1rem;
         }
 
         .loading.show {
@@ -381,6 +385,61 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: var(--accent);
+            color: white;
+            animation: pulse 1s ease infinite;
+        }
+
+        .step.done {
+            background: var(--success);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #8b5cf6);
+            width: 0%;
+            transition: width 0.5s ease;
         }
 
         footer {
@@ -445,7 +504,16 @@
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <div>변환 중... 잠시 기다려주세요</div>
+            <div class="loading-text" id="loadingText">변환 중... 잠시 기다려주세요</div>
+            <div class="progress-steps" id="progressSteps">
+                <div class="step" id="step1">📤 파일 업로드</div>
+                <div class="step" id="step2">🔍 OCR 분석</div>
+                <div class="step" id="step3">🎵 리듬 분석</div>
+                <div class="step" id="step4">🎸 GP5 생성</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
         </div>
 
         <div class="result-card" id="resultCard">
@@ -549,6 +617,39 @@
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
+        // Progress animation
+        function updateProgress(step, percent) {
+            const steps = ['step1', 'step2', 'step3', 'step4'];
+            steps.forEach((s, i) => {
+                const el = document.getElementById(s);
+                if (i < step - 1) {
+                    el.classList.remove('active');
+                    el.classList.add('done');
+                } else if (i === step - 1) {
+                    el.classList.add('active');
+                    el.classList.remove('done');
+                } else {
+                    el.classList.remove('active', 'done');
+                }
+            });
+            document.getElementById('progressFill').style.width = percent + '%';
+            
+            const texts = [
+                '📤 파일 업로드 중...',
+                '🔍 OCR로 악보 분석 중... (약 10-20초)',
+                '🎵 AI 리듬 분석 중...',
+                '🎸 GP5 파일 생성 중...'
+            ];
+            document.getElementById('loadingText').textContent = texts[step - 1] || '처리 중...';
+        }
+
+        function resetProgress() {
+            ['step1', 'step2', 'step3', 'step4'].forEach(s => {
+                document.getElementById(s).classList.remove('active', 'done');
+            });
+            document.getElementById('progressFill').style.width = '0%';
+        }
+
         // Convert
         convertBtn.addEventListener('click', async () => {
             if (files.length === 0) return;
@@ -556,6 +657,10 @@
             convertBtn.disabled = true;
             loading.classList.add('show');
             resultCard.classList.remove('show');
+            resetProgress();
+            
+            // Start progress animation
+            updateProgress(1, 10);
             
             try {
                 const formData = new FormData();
@@ -566,16 +671,34 @@
                     formData.append('title', document.getElementById('title').value);
                     formData.append('use_gemini', document.getElementById('useGemini').checked);
                     
+                    // Simulate progress while waiting
+                    updateProgress(1, 20);
+                    await new Promise(r => setTimeout(r, 300));
+                    updateProgress(2, 40);
+                    
+                    const progressInterval = setInterval(() => {
+                        const current = parseInt(document.getElementById('progressFill').style.width) || 40;
+                        if (current < 85) {
+                            document.getElementById('progressFill').style.width = (current + 5) + '%';
+                        }
+                    }, 2000);
+                    
                     const response = await fetch(`${API_URL}/convert`, {
                         method: 'POST',
                         body: formData
                     });
+                    
+                    clearInterval(progressInterval);
+                    updateProgress(4, 95);
                     
                     const result = await response.json();
                     
                     if (!response.ok) {
                         throw new Error(result.detail || 'Conversion failed');
                     }
+                    
+                    updateProgress(4, 100);
+                    await new Promise(r => setTimeout(r, 300));
                     
                     showResult(result);
                 } else {
