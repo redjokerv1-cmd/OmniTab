@@ -4,6 +4,41 @@ All notable changes to OmniTab will be documented in this file.
 
 ---
 
+## [0.6.0] - 2026-01-13
+
+### 🔪 ScoreSlicer: System & Measure Splitting
+
+#### Added
+- **ScoreSlicer** (`omnitab/tab_ocr/preprocessor/score_slicer.py`)
+  - Morphological dilation으로 시스템(줄) 감지
+  - Vertical projection으로 마디 경계 감지
+  - Edge detection 폴백
+  - 시각화 디버그 기능
+
+- **SlicedGeminiConverter** (`omnitab/tab_ocr/sliced_gemini_converter.py`)
+  - 이미지를 줄별로 분할
+  - 각 줄을 개별 Gemini 분석
+  - 결과 병합하여 GP5 생성
+
+- **Frontend: 3가지 변환 모드**
+  - Gemini Only (권장) - 전체 페이지 AI 분석
+  - Sliced - 줄별 분할 후 분석
+  - Hybrid - OCR + AI 병합
+
+#### Test Results
+```
+Mode Comparison (Yellow Jacket PDF):
+─────────────────────────────────────
+Mode            Measures  Notes
+─────────────────────────────────────
+Gemini Only     6         294  (BEST)
+Sliced          4         68
+```
+
+**결론:** Gemini Only가 가장 좋은 결과. Sliced는 특수 상황에서 옵션으로 제공.
+
+---
+
 ## [0.5.0] - 2026-01-13
 
 ### 🚀 Backend Complete: REST API + Frontend + Batch Processing
