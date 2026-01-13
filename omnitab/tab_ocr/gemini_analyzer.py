@@ -85,17 +85,21 @@ Analyze this TAB image now:"""
         Initialize Gemini analyzer
         
         Args:
-            api_key: Google AI API key. If not provided, uses GOOGLE_API_KEY env var
+            api_key: Google AI API key. If not provided, uses GEMINI_API_KEY or GOOGLE_API_KEY env var
         """
         if not GEMINI_AVAILABLE:
             raise ImportError("google-generativeai not installed. Run: pip install google-generativeai")
         
-        self.api_key = api_key or os.environ.get("GOOGLE_API_KEY")
+        # Check both env var names (GEMINI_API_KEY for consistency with stock-predictor)
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if not self.api_key:
-            raise ValueError("API key required. Set GOOGLE_API_KEY env var or pass api_key parameter")
+            raise ValueError("API key required. Set GEMINI_API_KEY env var or pass api_key parameter")
+        
+        # Model name matching stock-predictor (2025 latest)
+        self.model_name = "models/gemini-2.5-flash"
         
         genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.model = genai.GenerativeModel(self.model_name)
     
     def analyze(self, image_path: str) -> Dict:
         """
