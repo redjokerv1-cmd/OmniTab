@@ -571,9 +571,12 @@
                         body: formData
                     });
                     
-                    if (!response.ok) throw new Error('Conversion failed');
-                    
                     const result = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(result.detail || 'Conversion failed');
+                    }
+                    
                     showResult(result);
                 } else {
                     // Batch
@@ -633,7 +636,18 @@
         function showError(message) {
             document.getElementById('resultStatus').textContent = '✕';
             document.getElementById('resultStatus').className = 'result-status error';
-            document.getElementById('resultTitle').textContent = '변환 실패: ' + message;
+            
+            // Truncate long messages for title
+            const shortMsg = message.length > 100 ? message.substring(0, 100) + '...' : message;
+            document.getElementById('resultTitle').textContent = '변환 실패: ' + shortMsg;
+            
+            // Show full error in stats area
+            const statsDiv = document.querySelector('.result-stats');
+            statsDiv.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: left; padding: 1rem; background: rgba(239,68,68,0.1); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
+                    <strong>Error Details:</strong>\n${message}
+                </div>
+            `;
             
             document.getElementById('downloadBtn').style.display = 'none';
             resultCard.classList.add('show');

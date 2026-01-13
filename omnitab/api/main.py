@@ -11,6 +11,8 @@ Endpoints:
 import os
 import uuid
 import shutil
+import logging
+import traceback
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
@@ -24,6 +26,13 @@ from pydantic import BaseModel
 # Load environment
 from dotenv import load_dotenv
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("omnitab.api")
 
 # Initialize app
 app = FastAPI(
@@ -51,6 +60,42 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 # Mount static files
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def convert_pdf_to_images(pdf_path: Path) -> List[Path]:
+    """Convert PDF to images using PyMuPDF (no poppler needed)"""
+    try:
+        import fitz  # PyMuPDF
+        
+        logger.info(f"[PDF] Converting {pdf_path} using PyMuPDF")
+        
+        # Open PDF
+        doc = fitz.open(str(pdf_path))
+        
+        image_paths = []
+        for i, page in enumerate(doc):
+            # Render page at 200 DPI
+            mat = fitz.Matrix(200/72, 200/72)  # 72 is default DPI
+            pix = page.get_pixmap(matrix=mat)
+            
+            # Save as PNG
+            img_path = pdf_path.parent / f"{pdf_path.stem}_page_{i+1}.png"
+            pix.save(str(img_path))
+            image_paths.append(img_path)
+            logger.info(f"[PDF] Saved page {i+1}: {img_path}")
+        
+        doc.close()
+        return image_paths
+        
+    except ImportError:
+        logger.error("[PDF] PyMuPDF not installed")
+        raise HTTPException(
+            status_code=500,
+            detail="PDF conversion requires PyMuPDF. Install with: pip install PyMuPDF"
+        )
+    except Exception as e:
+        logger.error(f"[PDF] Conversion failed: {e}")
+        raise HTTPException(status_code=500, detail=f"PDF conversion failed: {str(e)}")
 
 
 # Models
@@ -137,11 +182,16 @@ async def convert_single(
     """
     Convert a single TAB image to GP5
     
-    - **file**: TAB image (PNG, JPG, etc.)
+    - **file**: TAB image (PNG, JPG, PDF)
     - **title**: Song title for GP5 file
     - **use_gemini**: Use Gemini for rhythm analysis (requires API key)
     """
     job_id = str(uuid.uuid4())[:8]
+    
+    logger.info(f"[{job_id}] === NEW CONVERSION REQUEST ===")
+    logger.info(f"[{job_id}] File: {file.filename}")
+    logger.info(f"[{job_id}] Title: {title}")
+    logger.info(f"[{job_id}] Use Gemini: {use_gemini}")
     
     try:
         # Save uploaded file
@@ -149,20 +199,35 @@ async def convert_single(
         with open(upload_path, "wb") as f:
             content = await file.read()
             f.write(content)
+        logger.info(f"[{job_id}] Saved to: {upload_path}")
+        
+        # Check if PDF - convert to images first
+        image_path = upload_path
+        if file.filename.lower().endswith('.pdf'):
+            logger.info(f"[{job_id}] Detected PDF, converting to images...")
+            image_paths = convert_pdf_to_images(upload_path)
+            if not image_paths:
+                raise ValueError("PDF conversion produced no images")
+            image_path = image_paths[0]  # Use first page
+            logger.info(f"[{job_id}] Using first page: {image_path}")
         
         # Output path
         output_path = OUTPUT_DIR / f"{job_id}.gp5"
         
         # Convert
+        logger.info(f"[{job_id}] Starting conversion...")
         from omnitab.tab_ocr.complete_converter import CompleteConverter
         
         converter = CompleteConverter()
         result = converter.convert(
-            image_path=str(upload_path),
+            image_path=str(image_path),
             output_path=str(output_path),
             title=title,
             use_gemini=use_gemini
         )
+        
+        logger.info(f"[{job_id}] Conversion complete!")
+        logger.info(f"[{job_id}] Result: {result}")
         
         # Store job
         job_data = ConversionResult(
@@ -180,13 +245,19 @@ async def convert_single(
         return job_data
         
     except Exception as e:
+        error_msg = str(e)
+        error_trace = traceback.format_exc()
+        logger.error(f"[{job_id}] CONVERSION FAILED!")
+        logger.error(f"[{job_id}] Error: {error_msg}")
+        logger.error(f"[{job_id}] Traceback:\n{error_trace}")
+        
         job_data = ConversionResult(
             job_id=job_id,
             status="failed",
-            error=str(e)
+            error=error_msg
         )
         jobs[job_id] = job_data
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"{error_msg}\n\nTraceback:\n{error_trace}")
 
 
 @app.post("/convert/batch")
