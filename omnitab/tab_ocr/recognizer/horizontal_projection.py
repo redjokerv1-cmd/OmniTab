@@ -148,17 +148,27 @@ class HorizontalProjection:
         systems = []
         used_peaks = set()
         
-        # Try each peak as potential first line of a system
+        # First pass: Try exact 6-peak systems
         for start_idx in range(len(peaks)):
             if peaks[start_idx] in used_peaks:
                 continue
             
-            # Try to find 5 more peaks with equal spacing
             system = self._try_build_system(peaks, start_idx, used_peaks)
             
             if system:
                 systems.append(system)
-                # Mark peaks as used
+                for y in system.line_y_positions:
+                    used_peaks.add(int(y))
+        
+        # Second pass: Try systems with interpolation (for missing lines)
+        for start_idx in range(len(peaks)):
+            if peaks[start_idx] in used_peaks:
+                continue
+            
+            system = self._try_build_system_with_interpolation(peaks, start_idx, used_peaks)
+            
+            if system:
+                systems.append(system)
                 for y in system.line_y_positions:
                     used_peaks.add(int(y))
         
@@ -201,6 +211,72 @@ class HorizontalProjection:
             y_end=candidate_peaks[5] + avg_spacing / 2,
             confidence=confidence
         )
+    
+    def _try_build_system_with_interpolation(self,
+                                              peaks: List[int],
+                                              start_idx: int,
+                                              used_peaks: set) -> Optional[TabStaffSystem]:
+        """
+        Try to build a 6-line system, allowing for 1 missing line.
+        
+        If we find 5 peaks with one gap that's ~2x the normal spacing,
+        we interpolate the missing line.
+        """
+        if start_idx + 4 >= len(peaks):
+            return None
+        
+        # Try with 5 peaks (one might be missing)
+        for num_peaks in [6, 5]:
+            if start_idx + num_peaks - 1 >= len(peaks):
+                continue
+                
+            candidate_peaks = peaks[start_idx:start_idx + num_peaks]
+            
+            if any(p in used_peaks for p in candidate_peaks):
+                continue
+            
+            spacings = [candidate_peaks[i+1] - candidate_peaks[i] for i in range(len(candidate_peaks)-1)]
+            
+            if num_peaks == 5:
+                # Check if one spacing is ~2x others (missing line)
+                sorted_spacings = sorted(spacings)
+                normal_spacing = sum(sorted_spacings[:3]) / 3  # Average of 3 smallest
+                
+                if normal_spacing < 5:
+                    continue
+                
+                # Find the gap
+                gap_idx = None
+                for i, s in enumerate(spacings):
+                    if 1.7 < s / normal_spacing < 2.3:  # ~2x normal
+                        gap_idx = i
+                        break
+                
+                if gap_idx is not None:
+                    # Interpolate the missing line
+                    interpolated_y = (candidate_peaks[gap_idx] + candidate_peaks[gap_idx + 1]) / 2
+                    
+                    # Insert into candidates
+                    full_peaks = list(candidate_peaks)
+                    full_peaks.insert(gap_idx + 1, int(interpolated_y))
+                    
+                    # Recalculate spacings
+                    new_spacings = [full_peaks[i+1] - full_peaks[i] for i in range(5)]
+                    avg_spacing = sum(new_spacings) / 5
+                    
+                    variance = max(abs(s - avg_spacing) / avg_spacing for s in new_spacings)
+                    if variance < self.spacing_tolerance:
+                        confidence = 0.8 * (1.0 - variance)  # Lower confidence for interpolated
+                        
+                        return TabStaffSystem(
+                            line_y_positions=[float(p) for p in full_peaks],
+                            line_spacing=avg_spacing,
+                            y_start=full_peaks[0] - avg_spacing / 2,
+                            y_end=full_peaks[5] + avg_spacing / 2,
+                            confidence=confidence
+                        )
+        
+        return None
     
     def detect_file(self, path: str) -> List[TabStaffSystem]:
         """Detect from file"""

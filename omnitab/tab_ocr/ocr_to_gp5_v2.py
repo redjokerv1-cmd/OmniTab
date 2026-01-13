@@ -16,6 +16,7 @@ import guitarpro as gp
 from .recognizer.enhanced_ocr import EnhancedTabOCR
 from .recognizer.horizontal_projection import HorizontalProjection, TabStaffSystem
 from .recognizer.header_detector import HeaderDetector
+from .recognizer.measure_detector import MeasureDetector, Measure
 
 
 @dataclass
@@ -54,6 +55,7 @@ class OcrToGp5V2:
         self.ocr = EnhancedTabOCR(use_gpu=use_gpu)
         self.line_detector = HorizontalProjection()
         self.header_detector = HeaderDetector(use_gpu=use_gpu)
+        self.measure_detector = MeasureDetector()
     
     def convert(self,
                 image_path: str,
@@ -101,21 +103,31 @@ class OcrToGp5V2:
         print(f"    Tuning: {tuning}")
         print(f"    Capo: {capo}")
         
-        # Step 4: Map digits to strings
-        print("\n[4] Mapping digits to strings...")
+        # Step 4: Detect measures
+        print("\n[4] Detecting measures...")
+        all_measures = self.measure_detector.detect(image, systems)
+        total_measures = sum(len(m) for m in all_measures)
+        print(f"    Found: {total_measures} measures across {len(systems)} systems")
+        
+        # Step 5: Map digits to strings
+        print("\n[5] Mapping digits to strings...")
         mapped_notes = self._map_digits_to_strings(digits, systems)
         print(f"    Mapped: {len(mapped_notes)} notes")
         
-        # Step 5: Group into chords
-        print("\n[5] Grouping into chords...")
+        # Step 6: Group into chords
+        print("\n[6] Grouping into chords...")
         chords = self._group_into_chords(mapped_notes)
         valid_chords = [c for c in chords if c.is_valid]
         print(f"    Total chords: {len(chords)}")
         print(f"    Valid chords: {len(valid_chords)}")
         
-        # Step 6: Create GP5
-        print("\n[6] Creating GP5 file...")
-        song = self._create_gp5(valid_chords, title, tempo, tuning)
+        # Step 7: Assign chords to measures
+        print("\n[7] Assigning chords to measures...")
+        chords_per_measure = self._assign_chords_to_measures(valid_chords, systems, all_measures)
+        
+        # Step 8: Create GP5
+        print("\n[8] Creating GP5 file...")
+        song = self._create_gp5_with_measures(chords_per_measure, title, tempo, tuning)
         
         # Step 7: Write file
         output_path = Path(output_path)
@@ -185,6 +197,102 @@ class OcrToGp5V2:
             ))
         
         return chords
+    
+    def _assign_chords_to_measures(self,
+                                    chords: List[MappedChord],
+                                    systems: List[TabStaffSystem],
+                                    all_measures: List[List[Measure]]) -> List[List[MappedChord]]:
+        """Assign chords to their respective measures based on X position"""
+        chords_per_measure = []
+        
+        for sys_idx, system in enumerate(systems):
+            if sys_idx >= len(all_measures):
+                continue
+            
+            measures = all_measures[sys_idx]
+            
+            # Get chords in this system
+            system_chords = [c for c in chords 
+                           if any(system.y_start <= n.y <= system.y_end for n in c.notes)]
+            
+            for measure in measures:
+                # Get chords in this measure
+                measure_chords = [c for c in system_chords
+                                 if measure.x_start <= c.x_position <= measure.x_end]
+                
+                # Sort by X position
+                measure_chords.sort(key=lambda c: c.x_position)
+                
+                if measure_chords:
+                    chords_per_measure.append(measure_chords)
+        
+        return chords_per_measure
+    
+    def _create_gp5_with_measures(self,
+                                   chords_per_measure: List[List[MappedChord]],
+                                   title: str,
+                                   tempo: int,
+                                   tuning: List[str]) -> gp.Song:
+        """Create GP5 with proper measure structure"""
+        song = gp.Song()
+        song.title = title
+        song.tempo = tempo
+        
+        track = song.tracks[0]
+        track.name = "Guitar"
+        track.channel.instrument = 25
+        
+        # Set tuning
+        tuning_midi = self._tuning_to_midi(tuning)
+        track.strings = [gp.GuitarString(i + 1, midi) for i, midi in enumerate(tuning_midi)]
+        
+        # Add measures
+        for measure_idx, measure_chords in enumerate(chords_per_measure):
+            # Ensure we have enough measures
+            while len(track.measures) <= measure_idx:
+                if measure_idx > 0:
+                    header = gp.MeasureHeader()
+                    song.measureHeaders.append(header)
+                    for t in song.tracks:
+                        new_measure = gp.Measure(t, header)
+                        t.measures.append(new_measure)
+            
+            measure = track.measures[measure_idx]
+            voice = measure.voices[0]
+            
+            # Distribute chords evenly across the measure
+            num_chords = len(measure_chords)
+            if num_chords == 0:
+                continue
+            
+            # Calculate beat duration based on number of chords
+            # Assume 4/4 time
+            if num_chords <= 4:
+                duration_value = 4  # Quarter notes
+            elif num_chords <= 8:
+                duration_value = 8  # Eighth notes
+            else:
+                duration_value = 16  # Sixteenth notes
+            
+            current_start = gp.Duration.quarterTime
+            
+            for chord in measure_chords:
+                beat = gp.Beat(voice)
+                beat.start = current_start
+                beat.duration = gp.Duration(value=duration_value)
+                beat.status = gp.BeatStatus.normal
+                
+                for note_data in sorted(chord.notes, key=lambda n: n.string):
+                    note = gp.Note(beat)
+                    note.type = gp.NoteType.normal
+                    note.string = note_data.string
+                    note.value = note_data.fret
+                    beat.notes.append(note)
+                
+                voice.beats.append(beat)
+                current_start += beat.duration.time
+        
+        return song
     
     def _create_gp5(self,
                     chords: List[MappedChord],
