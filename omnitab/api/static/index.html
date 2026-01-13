@@ -454,6 +454,30 @@
             text-decoration: none;
         }
 
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .radio-option:hover {
+            background: var(--border);
+        }
+
+        .radio-option input[type="radio"] {
+            accent-color: var(--accent);
+        }
+
+        .radio-option input[type="radio"]:checked + span {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
         @media (max-width: 600px) {
             .options {
                 grid-template-columns: 1fr;
@@ -487,16 +511,24 @@
             </div>
             <div class="option-group">
                 <label>변환 모드</label>
-                <div class="toggle-wrapper" style="margin-bottom: 0.75rem;">
-                    <label class="toggle">
-                        <input type="checkbox" id="geminiOnly" checked>
-                        <span class="toggle-slider"></span>
+                <div class="mode-selector" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label class="radio-option">
+                        <input type="radio" name="mode" value="gemini" checked>
+                        <span>Gemini Only (권장)</span>
                     </label>
-                    <span class="toggle-label">Gemini Only (권장)</span>
+                    <label class="radio-option">
+                        <input type="radio" name="mode" value="sliced">
+                        <span>Sliced (줄별 분석)</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="mode" value="hybrid">
+                        <span>Hybrid OCR</span>
+                    </label>
                 </div>
-                <div class="mode-hint" style="font-size: 0.8rem; color: var(--text-secondary);">
-                    ✓ Gemini Only: AI가 모든 것을 분석 (더 안정적)<br>
-                    ✗ Hybrid: OCR + AI 병합 (복잡함)
+                <div class="mode-hint" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    Gemini: 전체 페이지 AI 분석 (최고 결과)<br>
+                    Sliced: 줄별 분할 후 분석<br>
+                    Hybrid: OCR + AI 병합
                 </div>
             </div>
         </div>
@@ -673,8 +705,12 @@
                     // Single file
                     formData.append('file', files[0]);
                     formData.append('title', document.getElementById('title').value);
-                    formData.append('gemini_only', document.getElementById('geminiOnly').checked);
-                    formData.append('use_gemini', 'true');  // Always use Gemini if available
+                    
+                    // Get selected mode
+                    const mode = document.querySelector('input[name="mode"]:checked').value;
+                    formData.append('sliced_mode', mode === 'sliced');
+                    formData.append('gemini_only', mode === 'gemini' || mode === 'sliced');
+                    formData.append('use_gemini', 'true');
                     
                     // Simulate progress while waiting
                     updateProgress(1, 20);

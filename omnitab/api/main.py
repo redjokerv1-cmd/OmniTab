@@ -178,7 +178,8 @@ async def convert_single(
     file: UploadFile = File(...),
     title: str = Form("OmniTab Conversion"),
     use_gemini: bool = Form(True),
-    gemini_only: bool = Form(False)
+    gemini_only: bool = Form(False),
+    sliced_mode: bool = Form(False)
 ):
     """
     Convert a single TAB image to GP5
@@ -187,6 +188,7 @@ async def convert_single(
     - **title**: Song title for GP5 file
     - **use_gemini**: Use Gemini for rhythm analysis (requires API key)
     - **gemini_only**: Use ONLY Gemini (skip OCR entirely) - more stable
+    - **sliced_mode**: Slice into systems before analysis - highest accuracy
     """
     job_id = str(uuid.uuid4())[:8]
     
@@ -217,9 +219,18 @@ async def convert_single(
         output_path = OUTPUT_DIR / f"{job_id}.gp5"
         
         # Convert
-        logger.info(f"[{job_id}] Starting conversion... (gemini_only={gemini_only})")
+        logger.info(f"[{job_id}] Starting conversion... (gemini_only={gemini_only}, sliced={sliced_mode})")
         
-        if gemini_only:
+        if sliced_mode:
+            # Use sliced mode (highest accuracy)
+            from omnitab.tab_ocr.sliced_gemini_converter import SlicedGeminiConverter
+            converter = SlicedGeminiConverter()
+            result = converter.convert(
+                image_path=str(image_path),
+                output_path=str(output_path),
+                title=title
+            )
+        elif gemini_only:
             # Use Gemini-only mode (more stable)
             from omnitab.tab_ocr.gemini_only_converter import GeminiOnlyConverter
             converter = GeminiOnlyConverter()
