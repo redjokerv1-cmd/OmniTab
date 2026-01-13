@@ -26,6 +26,9 @@ alembic>=1.13.0
 # AI (low confidence fallback)
 google-generativeai>=0.4.0
 
+# Config
+python-dotenv>=1.0.0
+
 # Dev
 pytest>=8.0.0
 black>=24.0.0

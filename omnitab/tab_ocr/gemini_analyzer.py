@@ -2,10 +2,13 @@
 Gemini Vision API for TAB rhythm analysis
 
 Usage:
+    # Method 1: Environment variable (recommended)
+    # Create .env file with: GOOGLE_API_KEY=your-key-here
     from omnitab.tab_ocr.gemini_analyzer import GeminiTabAnalyzer
+    analyzer = GeminiTabAnalyzer()  # Auto-loads from .env
     
-    analyzer = GeminiTabAnalyzer(api_key="YOUR_API_KEY")
-    result = analyzer.analyze("path/to/tab_image.png")
+    # Method 2: Direct (NOT recommended for production)
+    analyzer = GeminiTabAnalyzer(api_key="your-key")
 """
 
 import os
@@ -13,6 +16,16 @@ import json
 import base64
 from pathlib import Path
 from typing import Dict, List, Optional
+
+# Load .env file if exists
+try:
+    from dotenv import load_dotenv
+    # Look for .env in project root
+    env_path = Path(__file__).parent.parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # dotenv not installed, use os.environ only
 
 try:
     import google.generativeai as genai

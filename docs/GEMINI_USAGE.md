@@ -6,7 +6,23 @@
 2. "Create API Key" 클릭
 3. 키 복사
 
-## 2. 환경 변수 설정
+## 2. API 키 설정 (보안!)
+
+**⚠️ 절대 코드에 API 키를 직접 넣지 마세요!**
+
+### 방법 A: .env 파일 (권장)
+
+```bash
+# 프로젝트 루트에 .env 파일 생성
+cp env.example .env
+
+# .env 파일 편집
+GOOGLE_API_KEY=your-actual-api-key-here
+```
+
+`.env` 파일은 자동으로 .gitignore에 포함되어 있어 Git에 커밋되지 않습니다.
+
+### 방법 B: 환경 변수
 
 ```powershell
 # Windows PowerShell (일회성)
