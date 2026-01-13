@@ -177,7 +177,8 @@ async def get_status():
 async def convert_single(
     file: UploadFile = File(...),
     title: str = Form("OmniTab Conversion"),
-    use_gemini: bool = Form(True)
+    use_gemini: bool = Form(True),
+    gemini_only: bool = Form(False)
 ):
     """
     Convert a single TAB image to GP5
@@ -185,6 +186,7 @@ async def convert_single(
     - **file**: TAB image (PNG, JPG, PDF)
     - **title**: Song title for GP5 file
     - **use_gemini**: Use Gemini for rhythm analysis (requires API key)
+    - **gemini_only**: Use ONLY Gemini (skip OCR entirely) - more stable
     """
     job_id = str(uuid.uuid4())[:8]
     
@@ -215,16 +217,27 @@ async def convert_single(
         output_path = OUTPUT_DIR / f"{job_id}.gp5"
         
         # Convert
-        logger.info(f"[{job_id}] Starting conversion...")
-        from omnitab.tab_ocr.complete_converter import CompleteConverter
+        logger.info(f"[{job_id}] Starting conversion... (gemini_only={gemini_only})")
         
-        converter = CompleteConverter()
-        result = converter.convert(
-            image_path=str(image_path),
-            output_path=str(output_path),
-            title=title,
-            use_gemini=use_gemini
-        )
+        if gemini_only:
+            # Use Gemini-only mode (more stable)
+            from omnitab.tab_ocr.gemini_only_converter import GeminiOnlyConverter
+            converter = GeminiOnlyConverter()
+            result = converter.convert(
+                image_path=str(image_path),
+                output_path=str(output_path),
+                title=title
+            )
+        else:
+            # Use OCR + Gemini hybrid
+            from omnitab.tab_ocr.complete_converter import CompleteConverter
+            converter = CompleteConverter()
+            result = converter.convert(
+                image_path=str(image_path),
+                output_path=str(output_path),
+                title=title,
+                use_gemini=use_gemini
+            )
         
         logger.info(f"[{job_id}] Conversion complete!")
         logger.info(f"[{job_id}] Result: {result}")

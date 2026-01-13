@@ -486,13 +486,17 @@
                 <input type="text" id="title" placeholder="예: Yellow Jacket" value="My Song">
             </div>
             <div class="option-group">
-                <label>리듬 분석</label>
-                <div class="toggle-wrapper">
+                <label>변환 모드</label>
+                <div class="toggle-wrapper" style="margin-bottom: 0.75rem;">
                     <label class="toggle">
-                        <input type="checkbox" id="useGemini" checked>
+                        <input type="checkbox" id="geminiOnly" checked>
                         <span class="toggle-slider"></span>
                     </label>
-                    <span class="toggle-label">Gemini AI 사용</span>
+                    <span class="toggle-label">Gemini Only (권장)</span>
+                </div>
+                <div class="mode-hint" style="font-size: 0.8rem; color: var(--text-secondary);">
+                    ✓ Gemini Only: AI가 모든 것을 분석 (더 안정적)<br>
+                    ✗ Hybrid: OCR + AI 병합 (복잡함)
                 </div>
             </div>
         </div>
@@ -669,7 +673,8 @@
                     // Single file
                     formData.append('file', files[0]);
                     formData.append('title', document.getElementById('title').value);
-                    formData.append('use_gemini', document.getElementById('useGemini').checked);
+                    formData.append('gemini_only', document.getElementById('geminiOnly').checked);
+                    formData.append('use_gemini', 'true');  // Always use Gemini if available
                     
                     // Simulate progress while waiting
                     updateProgress(1, 20);
