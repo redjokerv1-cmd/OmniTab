@@ -2,6 +2,37 @@
 
 All notable changes to OmniTab will be documented in this file.
 
+## [0.2.1] - 2026-01-13
+
+### 🔧 Fix: Chord Grouping Problem
+
+#### Problem
+- Horizontal staff lines connected digits → OCR grouped them as one blob
+- Result: Chords with 9-16 notes (impossible on 6-string guitar)
+
+#### Solution: Hybrid Approach
+1. **Staff Line Removal** (`line_remover.py`)
+   - Morphological operations to detect/remove horizontal lines
+   - `kernel=40`, `repair=2` (optimal parameters)
+
+2. **Tight Chord Grouping**
+   - Reduced `x_threshold` from 25 to 5
+   - Prevents adjacent digits from merging
+
+3. **EnhancedTabOCR** (`enhanced_ocr.py`)
+   - Combines line removal + optimized grouping
+   - Single class with best parameters
+
+#### Results
+| Metric | Before | After |
+|--------|--------|-------|
+| Problems (>6 notes) | 5 | **0** ✅ |
+| Max notes/chord | 16 | **5** |
+| Chords detected | 47 | **86** |
+| Confidence | 80% | 79.6% |
+
+---
+
 ## [0.2.0] - 2026-01-13
 
 ### 🚀 Major: TAB OCR Phase 1 Complete
