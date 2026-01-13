@@ -11,12 +11,24 @@ This version uses the correct approach:
 from pathlib import Path
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
+from datetime import datetime
+import uuid
+import cv2
+import numpy as np
 import guitarpro as gp
 
 from .recognizer.enhanced_ocr import EnhancedTabOCR
 from .recognizer.horizontal_projection import HorizontalProjection, TabStaffSystem
 from .recognizer.header_detector import HeaderDetector
 from .recognizer.measure_detector import MeasureDetector, Measure
+
+# Learning DB
+try:
+    from ..learning.db import LearningDB, get_image_hash
+    from ..learning.models import OCRAttempt, ErrorPattern
+    LEARNING_ENABLED = True
+except ImportError:
+    LEARNING_ENABLED = False
 
 
 @dataclass
@@ -56,6 +68,14 @@ class OcrToGp5V2:
         self.line_detector = HorizontalProjection()
         self.header_detector = HeaderDetector(use_gpu=use_gpu)
         self.measure_detector = MeasureDetector()
+        
+        # Learning DB
+        self.learning_db = None
+        if LEARNING_ENABLED:
+            try:
+                self.learning_db = LearningDB()
+            except Exception as e:
+                print(f"Warning: Learning DB not available: {e}")
     
     def convert(self,
                 image_path: str,
@@ -127,7 +147,7 @@ class OcrToGp5V2:
         
         # Step 8: Create GP5
         print("\n[8] Creating GP5 file...")
-        song = self._create_gp5_with_measures(chords_per_measure, title, tempo, tuning)
+        song = self._create_gp5_with_measures(chords_per_measure, title, tempo, tuning, capo)
         
         # Step 7: Write file
         output_path = Path(output_path)
@@ -135,7 +155,12 @@ class OcrToGp5V2:
         gp.write(song, str(output_path), version=(5, 1, 0))
         print(f"    Saved: {output_path}")
         
-        return {
+        # Calculate stats for learning
+        duplicates_removed = len(digits) - len(mapped_notes) - (len(digits) - len([d for d in digits if any(s.y_start <= d.y <= s.y_end for s in systems)]))
+        suspicious = sum(1 for n in mapped_notes if n.fret > 19)
+        avg_conf = sum(d.confidence for d in digits) / max(len(digits), 1)
+        
+        result = {
             'output_path': str(output_path),
             'systems_detected': len(systems),
             'digits_recognized': len(digits),
@@ -143,8 +168,43 @@ class OcrToGp5V2:
             'chords_total': len(chords),
             'chords_valid': len(valid_chords),
             'tuning': tuning,
-            'capo': capo
+            'capo': capo,
+            'measures_detected': total_measures,
+            'duplicates_removed': max(0, duplicates_removed),
+            'suspicious_count': suspicious,
+            'avg_confidence': avg_conf
         }
+        
+        # Save to Learning DB
+        if self.learning_db:
+            try:
+                attempt = OCRAttempt(
+                    id=str(uuid.uuid4()),
+                    timestamp=datetime.now(),
+                    image_path=str(image_path),
+                    image_hash=get_image_hash(str(image_path)),
+                    total_digits=len(digits),
+                    mapped_digits=len(mapped_notes),
+                    unmapped_digits=len(digits) - len(mapped_notes),
+                    duplicates_removed=result['duplicates_removed'],
+                    systems_detected=len(systems),
+                    measures_detected=total_measures,
+                    avg_confidence=avg_conf,
+                    suspicious_count=suspicious,
+                    gp5_path=str(output_path),
+                    gp5_notes=sum(len(c.notes) for c in valid_chords),
+                    gp5_measures=len(chords_per_measure),
+                    settings={
+                        'tuning': tuning,
+                        'capo': capo
+                    }
+                )
+                self.learning_db.save_attempt(attempt)
+                print(f"\n    [DB] Saved attempt {attempt.id[:8]}...")
+            except Exception as e:
+                print(f"\n    [DB] Failed to save: {e}")
+        
+        return result
     
     def _map_digits_to_strings(self,
                                 digits,
@@ -167,7 +227,38 @@ class OcrToGp5V2:
                         ))
                     break
         
-        return mapped
+        # Deduplicate: remove close duplicates on same string
+        return self._deduplicate_notes(mapped)
+    
+    def _deduplicate_notes(self, 
+                           notes: List[MappedNote],
+                           x_threshold: float = 12) -> List[MappedNote]:
+        """Remove duplicate notes (same position, same string)"""
+        if not notes:
+            return notes
+        
+        # Sort by string, then X
+        sorted_notes = sorted(notes, key=lambda n: (n.string, n.y, n.x))
+        
+        result = [sorted_notes[0]]
+        
+        for note in sorted_notes[1:]:
+            prev = result[-1]
+            
+            # Same string, similar Y, close X = duplicate
+            if (note.string == prev.string and 
+                abs(note.y - prev.y) < 5 and
+                abs(note.x - prev.x) < x_threshold):
+                # Keep the one with higher confidence or larger fret (2-digit)
+                if note.confidence > prev.confidence:
+                    result[-1] = note
+                elif note.fret > prev.fret and prev.fret < 10:
+                    # Prefer 2-digit number over 1-digit
+                    result[-1] = note
+            else:
+                result.append(note)
+        
+        return result
     
     def _group_into_chords(self,
                            notes: List[MappedNote],
@@ -232,7 +323,8 @@ class OcrToGp5V2:
                                    chords_per_measure: List[List[MappedChord]],
                                    title: str,
                                    tempo: int,
-                                   tuning: List[str]) -> gp.Song:
+                                   tuning: List[str],
+                                   capo: int = 0) -> gp.Song:
         """Create GP5 with proper measure structure"""
         song = gp.Song()
         song.title = title
@@ -242,8 +334,15 @@ class OcrToGp5V2:
         track.name = "Guitar"
         track.channel.instrument = 25
         
+        # Note: PyGuitarPro doesn't support capo directly
+        # Capo info is stored in song comments
+        if capo > 0:
+            song.comments = f"Capo: Fret {capo}"
+        
         # Set tuning
         tuning_midi = self._tuning_to_midi(tuning)
+        print(f"    Tuning MIDI: {tuning_midi}")
+        print(f"    Capo: {capo}")
         track.strings = [gp.GuitarString(i + 1, midi) for i, midi in enumerate(tuning_midi)]
         
         # Add measures

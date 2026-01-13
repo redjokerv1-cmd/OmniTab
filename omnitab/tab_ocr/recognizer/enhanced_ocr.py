@@ -136,7 +136,7 @@ class EnhancedTabOCR:
             self._reader = easyocr.Reader(['en'], gpu=self.use_gpu, verbose=False)
         return self._reader
     
-    def process(self, image: np.ndarray) -> Dict:
+    def process(self, image: np.ndarray, tab_systems: List = None) -> Dict:
         """
         Process TAB image with optimal pipeline.
         
