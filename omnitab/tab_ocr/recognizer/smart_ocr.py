@@ -114,17 +114,24 @@ class SmartTabOCR:
                    line_y: float,
                    width: int,
                    string_num: int,
-                   sys_idx: int) -> List[SmartDigit]:
-        """Scan a single string line with sliding windows"""
+                   sys_idx: int,
+                   min_x: int = 100) -> List[SmartDigit]:
+        """Scan a single string line with sliding windows
+        
+        Args:
+            min_x: Skip this many pixels from left (TAB letter area)
+        """
         digits = []
         
         # Window height centered on line
-        h = 20
+        # h=20 causes vertical bleeding between strings (spacing ~15px)
+        # Use smaller h to stay within single string's area
+        h = 8  # Reduced from 20 to prevent bleeding to adjacent strings
         y_start = max(0, int(line_y) - h)
         y_end = min(image.shape[0], int(line_y) + h)
         
-        # Sliding window
-        for x in range(0, width - self.window_width, self.window_stride):
+        # Sliding window - skip TAB letter area (T, A, B text on left)
+        for x in range(min_x, width - self.window_width, self.window_stride):
             window = image[y_start:y_end, x:x+self.window_width]
             
             # Skip mostly white windows

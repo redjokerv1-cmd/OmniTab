@@ -318,7 +318,7 @@ class SmartToGp5:
         return song
     
     def _tuning_to_midi(self, tuning: List[str]) -> List[int]:
-        """Convert tuning to MIDI"""
+        """Convert tuning to MIDI - find closest octave to standard"""
         note_to_midi = {
             'C': 0, 'C#': 1, 'DB': 1,
             'D': 2, 'D#': 3, 'EB': 3,
@@ -328,7 +328,8 @@ class SmartToGp5:
             'B': 11
         }
         
-        standard_midi = [64, 59, 55, 50, 45, 40]
+        # Standard tuning MIDI values
+        standard_midi = [64, 59, 55, 50, 45, 40]  # E4, B3, G3, D3, A2, E2
         result = []
         
         for i, note in enumerate(tuning):
@@ -337,8 +338,20 @@ class SmartToGp5:
             else:
                 note_upper = note.upper().replace('♯', '#').replace('♭', 'B')
                 base = note_to_midi.get(note_upper, 0)
-                octave = 4 if i < 2 else 3 if i < 4 else 2
-                result.append(base + (octave + 1) * 12)
+                
+                # Find octave closest to standard tuning for this string
+                target = standard_midi[i]
+                best_midi = target
+                best_diff = float('inf')
+                
+                for octave in range(1, 6):  # C1 to C5
+                    midi = base + (octave + 1) * 12
+                    diff = abs(midi - target)
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_midi = midi
+                
+                result.append(best_midi)
         
         return result
 
