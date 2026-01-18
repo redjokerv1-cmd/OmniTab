@@ -44,63 +44,84 @@ class GeminiTabAnalyzer:
     """
     
     # Prompt for TAB analysis
-    ANALYSIS_PROMPT = """You are a guitar tablature (TAB) expert. Analyze this TAB image and extract the musical information.
+    ANALYSIS_PROMPT = """You are a guitar tablature (TAB) expert.
 
-## CRITICAL: TAB Line Reading Rules
+## CRITICAL: This image has TWO parts - READ THEM SEPARATELY!
 
-In guitar TAB notation:
-- The TOP line of TAB = String 1 (thinnest, highest pitch E string)
-- The BOTTOM line of TAB = String 6 (thickest, lowest pitch E or alternate tuning)
+### PART 1: Standard Notation (5-line staff with note heads "♩")
+- This shows RHYTHM information (note duration, rests, time signature)
+- Use this ONLY for rhythm/duration, NOT for pitch
 
-Reading Example:
+### PART 2: TAB (6-line grid with NUMBERS)
+- This shows FRET POSITIONS (which string, which fret)
+- READ ONLY THE NUMBERS from this section
+- The TAB section has 6 horizontal lines with numbers on them
+
+## HOW TO READ TAB NUMBERS:
+
+The TAB section looks like this (6 lines with letters T-A-B on left):
 ```
-TAB:
-e|--5--  ← This is String 1 (top line), fret 5
-B|--7--  ← This is String 2, fret 7
-G|--0--  ← This is String 3, fret 0
-D|-----  ← This is String 4, no note (skip this)
-A|--2--  ← This is String 5, fret 2
-E|--3--  ← This is String 6 (bottom line), fret 3
+T ──10──12──15──   ← String 1 (TOP line), frets 10, 12, 15
+A ──0───────0───   ← String 2, frets 0, 0
+B ──12──14──15──   ← String 3, frets 12, 14, 15
+  ──10──────15──   ← String 4
+  ──────────────   ← String 5 (empty = no note)
+  ──────────────   ← String 6 (BOTTOM line)
 ```
 
-For each measure, identify:
-1. All notes (which string 1-6, which fret 0-24)
-2. The rhythm/duration of each note or chord
-3. Any techniques (H=hammer-on, P=pull-off, /=slide up, \\=slide down, b=bend, AH=artificial harmonic, etc.)
+## READING RULES:
 
-Return the result as JSON in this exact format:
+1. **IGNORE the 5-line staff notation (♩ note heads)** - use it ONLY for rhythm
+2. **FOCUS on the 6-line TAB section** - read the NUMBERS only
+3. Numbers vertically aligned = same beat (play together)
+4. String 1 = TOP line of 6-line TAB
+5. String 6 = BOTTOM line of 6-line TAB
+6. Empty line = no note on that string for that beat
+7. <12> = harmonic at fret 12
+8. H = hammer-on, P = pull-off, AH = artificial harmonic
+
+## EXAMPLE:
+
+If TAB shows:
+```
+  10    12
+   0
+  12    14
+  10
+```
+
+This means:
+- Beat 1: String 1 fret 10, String 2 fret 0, String 3 fret 12, String 4 fret 10
+- Beat 2: String 1 fret 12, String 3 fret 14
+
+## OUTPUT FORMAT (JSON):
+
 {
   "measures": [
     {
       "number": 1,
       "beats": [
         {
-          "duration": "quarter",
+          "duration": "eighth",  // from staff notation rhythm
           "notes": [
-            {"string": 1, "fret": 5, "technique": null},
-            {"string": 2, "fret": 7, "technique": "hammer-on"}
+            {"string": 1, "fret": 10, "technique": null},
+            {"string": 2, "fret": 0, "technique": null},
+            {"string": 3, "fret": 12, "technique": null},
+            {"string": 4, "fret": 10, "technique": null}
           ]
         }
       ]
     }
   ],
-  "tuning": ["E", "B", "G", "D", "A", "E"],
-  "capo": 0,
-  "tempo": 120
+  "tuning": ["E", "C", "G", "D", "G", "C"],  // from header if shown
+  "capo": 2,  // from header if shown
+  "tempo": 65  // from header if shown
 }
 
-IMPORTANT RULES:
-1. String 1 = TOP line of TAB (highest pitch)
-2. String 6 = BOTTOM line of TAB (lowest pitch)  
-3. Count lines from TOP to BOTTOM: 1, 2, 3, 4, 5, 6
-4. Only include notes that have a fret number - skip empty lines!
-5. If you see "<12>" or similar brackets, it means harmonics at fret 12
-6. If tuning info shows ①=E ②=C etc., use that order for tuning array
-7. Fret 0 = open string
-8. Be precise with rhythm - look at note stems, beams, and flags
-9. (X) or x means muted/dead note - include with technique "muted"
-
-Analyze this TAB image now:"""
+Now analyze the image. Remember: 
+- Staff = rhythm only
+- TAB = fret numbers only
+- Numbers on same vertical position = same beat"""
 
     def __init__(self, api_key: Optional[str] = None):
         """
