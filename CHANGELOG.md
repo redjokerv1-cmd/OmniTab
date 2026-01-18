@@ -4,6 +4,42 @@ All notable changes to OmniTab will be documented in this file.
 
 ---
 
+## [0.7.1] - 2026-01-18
+
+### 🎯 Gemini Prompt Optimization - String Recognition Fix
+
+#### Fixed
+- **TAB 줄 번호 인식 오류 수정** (핵심 개선!)
+  - 문제: Gemini가 TAB 줄 번호를 잘못 해석 (1-4번 줄 완전히 틀림)
+  - 원인: 프롬프트에 TAB 읽기 규칙이 명확하지 않음
+  - 해결: 상세한 예시와 명확한 규칙 추가
+    - String 1 = TOP line (명시적 설명)
+    - String 6 = BOTTOM line
+    - 실제 TAB 예시 포함
+
+- **technique 리스트 처리 버그 수정**
+  - 문제: Gemini가 technique을 리스트로 반환하면 에러 발생
+  - 해결: `_apply_technique()` 메서드에 리스트 처리 로직 추가
+
+#### Test Results (After Fix)
+```
+Yellow Jacket - page_1.png:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Metric          Before      After
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Notes:          129         291  ✅ (+126%)
+Measures:       6           5-6  ✅
+String 1-4:     ❌ 완전틀림   ✅ 정확
+Tuning:         ✅           ✅
+Capo:           ✅ 2         ✅ 2
+```
+
+#### Changed
+- `gemini_analyzer.py`: 프롬프트에 TAB 읽기 규칙 상세 추가
+- `gemini_only_converter.py`: technique 타입 안전 처리
+
+---
+
 ## [0.7.0] - 2026-01-18
 
 ### 🔧 Critical Bug Fixes + SDK Migration

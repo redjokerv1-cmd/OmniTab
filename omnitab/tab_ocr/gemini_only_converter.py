@@ -335,13 +335,23 @@ class GeminiOnlyConverter:
         
         return strings
     
-    def _apply_technique(self, note: gp.Note, technique: str):
+    def _apply_technique(self, note: gp.Note, technique):
         """Apply technique effect to note
         
         Based on PyGuitarPro documentation:
         https://pyguitarpro.readthedocs.io/en/stable/
         """
         if not technique:
+            return
+        
+        # Handle list of techniques
+        if isinstance(technique, list):
+            for t in technique:
+                self._apply_technique(note, t)
+            return
+        
+        # Handle non-string types
+        if not isinstance(technique, str):
             return
         
         tech_lower = technique.lower().replace('-', '').replace('_', '').replace(' ', '')

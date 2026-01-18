@@ -46,10 +46,27 @@ class GeminiTabAnalyzer:
     # Prompt for TAB analysis
     ANALYSIS_PROMPT = """You are a guitar tablature (TAB) expert. Analyze this TAB image and extract the musical information.
 
+## CRITICAL: TAB Line Reading Rules
+
+In guitar TAB notation:
+- The TOP line of TAB = String 1 (thinnest, highest pitch E string)
+- The BOTTOM line of TAB = String 6 (thickest, lowest pitch E or alternate tuning)
+
+Reading Example:
+```
+TAB:
+e|--5--  ← This is String 1 (top line), fret 5
+B|--7--  ← This is String 2, fret 7
+G|--0--  ← This is String 3, fret 0
+D|-----  ← This is String 4, no note (skip this)
+A|--2--  ← This is String 5, fret 2
+E|--3--  ← This is String 6 (bottom line), fret 3
+```
+
 For each measure, identify:
-1. All notes (which string, which fret)
+1. All notes (which string 1-6, which fret 0-24)
 2. The rhythm/duration of each note or chord
-3. Any techniques (H=hammer-on, P=pull-off, /=slide up, \\=slide down, b=bend, etc.)
+3. Any techniques (H=hammer-on, P=pull-off, /=slide up, \\=slide down, b=bend, AH=artificial harmonic, etc.)
 
 Return the result as JSON in this exact format:
 {
@@ -58,7 +75,7 @@ Return the result as JSON in this exact format:
       "number": 1,
       "beats": [
         {
-          "duration": "quarter",  // "whole", "half", "quarter", "eighth", "sixteenth"
+          "duration": "quarter",
           "notes": [
             {"string": 1, "fret": 5, "technique": null},
             {"string": 2, "fret": 7, "technique": "hammer-on"}
@@ -72,12 +89,16 @@ Return the result as JSON in this exact format:
   "tempo": 120
 }
 
-IMPORTANT:
-- String 1 = highest pitch (thin E string)
-- String 6 = lowest pitch (thick E string)
-- Fret 0 = open string
-- Be precise with rhythm - look at note stems, beams, and flags
-- If uncertain, use "quarter" as default
+IMPORTANT RULES:
+1. String 1 = TOP line of TAB (highest pitch)
+2. String 6 = BOTTOM line of TAB (lowest pitch)  
+3. Count lines from TOP to BOTTOM: 1, 2, 3, 4, 5, 6
+4. Only include notes that have a fret number - skip empty lines!
+5. If you see "<12>" or similar brackets, it means harmonics at fret 12
+6. If tuning info shows ①=E ②=C etc., use that order for tuning array
+7. Fret 0 = open string
+8. Be precise with rhythm - look at note stems, beams, and flags
+9. (X) or x means muted/dead note - include with technique "muted"
 
 Analyze this TAB image now:"""
 
