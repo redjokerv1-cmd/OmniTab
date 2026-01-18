@@ -53,7 +53,25 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+# ========================================
+# TRAINING DATA MANAGEMENT
+# ========================================
+
+# 합성 데이터 (재생성 가능 - Git 제외)
 training_data_full/
 training_data_test/
+
+# 로컬 학습 데이터 (외부 리포로 이동됨)
+learning_data/
+
+# YOLO 훈련 결과 (대용량 - Git 제외)
 runs/
+
+# ========================================
+# 학습 데이터는 별도 리포지토리에서 관리:
+# G:\Study\AI\learning-data-vault
+# git@github.com:redjokerv1-cmd/learning-data-vault.git
+# ========================================
+
+# Debug files
 debug_*.png
