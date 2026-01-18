@@ -44,84 +44,75 @@ class GeminiTabAnalyzer:
     """
     
     # Prompt for TAB analysis
-    ANALYSIS_PROMPT = """You are a guitar tablature (TAB) expert.
+    ANALYSIS_PROMPT = """You are a guitar TAB reading expert. Read ONLY the TAB section (6 lines with numbers).
 
-## CRITICAL: This image has TWO parts - READ THEM SEPARATELY!
+## TAB READING RULES:
+- TAB has 6 horizontal lines (strings 1-6, top to bottom)
+- String 1 = TOP line = highest pitch
+- String 6 = BOTTOM line = lowest pitch
+- Numbers on lines = fret positions
+- Numbers VERTICALLY ALIGNED = same beat (played together)
+- Vertical bar | = measure boundary
 
-### PART 1: Standard Notation (5-line staff with note heads "♩")
-- This shows RHYTHM information (note duration, rests, time signature)
-- Use this ONLY for rhythm/duration, NOT for pitch
-
-### PART 2: TAB (6-line grid with NUMBERS)
-- This shows FRET POSITIONS (which string, which fret)
-- READ ONLY THE NUMBERS from this section
-- The TAB section has 6 horizontal lines with numbers on them
-
-## HOW TO READ TAB NUMBERS:
-
-The TAB section looks like this (6 lines with letters T-A-B on left):
+## CRITICAL: VERTICAL ALIGNMENT
+When numbers are in the SAME COLUMN (vertically aligned), they form ONE beat.
+Example:
 ```
-T ──10──12──15──   ← String 1 (TOP line), frets 10, 12, 15
-A ──0───────0───   ← String 2, frets 0, 0
-B ──12──14──15──   ← String 3, frets 12, 14, 15
-  ──10──────15──   ← String 4
-  ──────────────   ← String 5 (empty = no note)
-  ──────────────   ← String 6 (BOTTOM line)
+  10    12    15
+   0          0
+  12    14    15
+  10          10
 ```
+Beat 1: S1=10, S2=0, S3=12, S4=10 (all in first column)
+Beat 2: S1=12, S3=14 (in second column)
+Beat 3: S1=15, S2=0, S3=15, S4=10 (in third column)
 
-## READING RULES:
+## COUNTING STRINGS FROM TOP:
+Line 1 (top)    = String 1
+Line 2          = String 2  
+Line 3          = String 3
+Line 4          = String 4
+Line 5          = String 5
+Line 6 (bottom) = String 6
 
-1. **IGNORE the 5-line staff notation (♩ note heads)** - use it ONLY for rhythm
-2. **FOCUS on the 6-line TAB section** - read the NUMBERS only
-3. Numbers vertically aligned = same beat (play together)
-4. String 1 = TOP line of 6-line TAB
-5. String 6 = BOTTOM line of 6-line TAB
-6. Empty line = no note on that string for that beat
-7. <12> = harmonic at fret 12
-8. H = hammer-on, P = pull-off, AH = artificial harmonic
-
-## EXAMPLE:
-
-If TAB shows:
+## FIRST MEASURE EXAMPLE (from Yellow Jacket):
+Looking at first 4 beats after "H" marking:
 ```
-  10    12
-   0
-  12    14
-  10
+ H
+ 10   12   15   17
+  0        0    0
+ 12   14   15
+ 10             10
 ```
+Correct reading:
+- Beat 1: S1=10, S2=0, S3=12, S4=10
+- Beat 2: S1=12, S3=14
+- Beat 3: S1=15, S2=0, S3=15
+- Beat 4: S1=17, S2=0, S4=10
 
-This means:
-- Beat 1: String 1 fret 10, String 2 fret 0, String 3 fret 12, String 4 fret 10
-- Beat 2: String 1 fret 12, String 3 fret 14
-
-## OUTPUT FORMAT (JSON):
-
+## OUTPUT FORMAT:
 {
   "measures": [
     {
       "number": 1,
       "beats": [
-        {
-          "duration": "eighth",  // from staff notation rhythm
-          "notes": [
-            {"string": 1, "fret": 10, "technique": null},
-            {"string": 2, "fret": 0, "technique": null},
-            {"string": 3, "fret": 12, "technique": null},
-            {"string": 4, "fret": 10, "technique": null}
-          ]
-        }
+        {"notes": [{"string": 1, "fret": 10}, {"string": 2, "fret": 0}, {"string": 3, "fret": 12}, {"string": 4, "fret": 10}]},
+        {"notes": [{"string": 1, "fret": 12}, {"string": 3, "fret": 14}]}
       ]
     }
   ],
-  "tuning": ["E", "C", "G", "D", "G", "C"],  // from header if shown
-  "capo": 2,  // from header if shown
-  "tempo": 65  // from header if shown
+  "tuning": ["E", "C", "G", "D", "G", "C"],
+  "capo": 2,
+  "tempo": 65
 }
 
-Now analyze the image. Remember: 
-- Staff = rhythm only
-- TAB = fret numbers only
-- Numbers on same vertical position = same beat"""
+## SPECIAL NOTATIONS:
+- <12> = harmonic at fret 12
+- H = hammer-on, P = pull-off, AH = artificial harmonic
+- x or X = muted note (use fret: -1)
+
+Now analyze this TAB image carefully. Count strings from TOP (1) to BOTTOM (6).
+Check vertical alignment to group notes into beats correctly."""
 
     def __init__(self, api_key: Optional[str] = None):
         """

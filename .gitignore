@@ -53,3 +53,7 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+training_data_full/
+training_data_test/
+runs/
+debug_*.png
