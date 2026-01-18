@@ -4,6 +4,76 @@ All notable changes to OmniTab will be documented in this file.
 
 ---
 
+## [0.8.0] - 2026-01-18
+
+### 🚀 Major: YOLO 전략 + Learning Data Vault
+
+#### 전략 전환: Gemini Vision → YOLO + 합성 데이터
+
+**배경**: Gemini Vision의 한계 발견
+- TAB 줄 번호 정확도 ~25% (1-4번 줄 계속 오인식)
+- 오선보와 TAB 구분 실패
+- 세로 정렬 (같은 비트의 노트) 인식 불가
+
+**새 전략**: YOLO 객체 감지 + 합성 데이터
+```
+1. PyGuitarPro로 랜덤 TAB 생성
+2. 이미지로 렌더링 + 자동 annotation
+3. YOLO 훈련 → 각 숫자의 (x, y) 좌표 감지
+4. Y좌표로 줄 번호 결정, X좌표로 시간 순서 정렬
+```
+
+#### Added
+
+- **합성 데이터 생성기** (`omnitab/training/synthetic_tab_generator.py`)
+  - 랜덤 TAB 악보 생성 (PyGuitarPro)
+  - 이미지 렌더링 + YOLO 형식 annotation 자동 생성
+  - 다양한 폰트, 스타일, 노이즈 지원
+  - 10,000장/분 생성 가능
+  - 클래스: 0-24 (프렛), h, p, x, harmonic (29개)
+
+- **YOLO 훈련 스크립트** (`omnitab/training/train_yolo.py`)
+  - ultralytics 기반
+  - train/val/predict 명령어 지원
+
+- **Learning Data Manager** (`omnitab/training/learning_data_manager.py`)
+  - 실제 TAB 이미지 + annotation 축적
+  - 사용자 수정 데이터 저장 (Active Learning)
+  - SQLite 기반 히스토리 추적
+  - 훈련 데이터 내보내기
+
+- **Learning Data Vault** (별도 리포지토리)
+  - `git@github.com:redjokerv1-cmd/learning-data-vault.git`
+  - 귀중한 학습 데이터 중앙 관리
+  - OmniTab + 향후 프로젝트 지원
+
+#### Technical Details
+
+```python
+# 합성 데이터 생성
+from omnitab.training.synthetic_tab_generator import SyntheticTabGenerator
+gen = SyntheticTabGenerator("training_data")
+gen.generate_dataset(10000)  # 10,000장 생성
+
+# YOLO 훈련
+python -m omnitab.training.train_yolo train --data data.yaml --epochs 100
+
+# 학습 데이터 관리
+from omnitab.training.config import get_data_manager
+ldm = get_data_manager()
+ldm.add_real_image("tab.png", "annotation.txt")
+```
+
+#### Data Strategy
+
+| 데이터 유형 | 저장 위치 | Git 저장 |
+|------------|----------|----------|
+| 합성 데이터 | OmniTab/training_data_full/ | ❌ (재생성 가능) |
+| 실제 이미지 | learning-data-vault/omnitab/real/ | ✅ |
+| 수정 데이터 | learning-data-vault/omnitab/corrected/ | ✅ |
+
+---
+
 ## [0.7.1] - 2026-01-18
 
 ### 🎯 Gemini Prompt Optimization - String Recognition Fix
