@@ -336,53 +336,87 @@ class GeminiOnlyConverter:
         return strings
     
     def _apply_technique(self, note: gp.Note, technique: str):
-        """Apply technique effect to note (comprehensive implementation)"""
+        """Apply technique effect to note
+        
+        Based on PyGuitarPro documentation:
+        https://pyguitarpro.readthedocs.io/en/stable/
+        """
         if not technique:
             return
         
-        tech_lower = technique.lower()
+        tech_lower = technique.lower().replace('-', '').replace('_', '').replace(' ', '')
         
-        # Hammer-on / Pull-off (H/P)
-        if 'hammer' in tech_lower or tech_lower == 'h':
+        # Hammer-on / Pull-off (H/P) - GP5 uses same flag
+        if 'hammeron' in tech_lower or tech_lower == 'h':
             note.effect.hammer = True
-        elif 'pull' in tech_lower or tech_lower == 'p':
-            note.effect.hammer = True  # GP5 uses same flag for H/P
+        elif 'pulloff' in tech_lower or tech_lower == 'p':
+            note.effect.hammer = True
         
-        # Slide
-        elif 'slide' in tech_lower or tech_lower in ['/', '\\', 's']:
+        # Slide variations (from GP5 spec)
+        elif 'slideup' in tech_lower or tech_lower == '/':
+            note.effect.slides = [gp.SlideType.intoFromBelow]
+        elif 'slidedown' in tech_lower or tech_lower == '\\':
+            note.effect.slides = [gp.SlideType.intoFromAbove]
+        elif 'legatoslide' in tech_lower:
+            note.effect.slides = [gp.SlideType.legatoSlide]
+        elif 'slide' in tech_lower or tech_lower == 's':
             note.effect.slides = [gp.SlideType.shiftSlide]
         
-        # Bend
+        # Bend (full step = 100, half step = 50)
         elif 'bend' in tech_lower or tech_lower == 'b':
             note.effect.bend = gp.BendEffect(
                 type=gp.BendType.bend,
-                value=100,
+                value=100,  # Full step
                 points=[
                     gp.BendPoint(0, 0),
                     gp.BendPoint(6, 100),
                     gp.BendPoint(12, 100)
                 ]
             )
+        elif 'prebend' in tech_lower:
+            note.effect.bend = gp.BendEffect(
+                type=gp.BendType.preBend,
+                value=100,
+                points=[gp.BendPoint(0, 100), gp.BendPoint(12, 100)]
+            )
         
         # Vibrato
         elif 'vibrato' in tech_lower or tech_lower == 'v':
             note.effect.vibrato = True
         
-        # Natural Harmonic
+        # Harmonics (from GP5 spec: natural, artificial, tapped, pinch, semi)
+        elif 'naturalharmonic' in tech_lower or tech_lower == 'nh':
+            note.effect.harmonic = gp.NaturalHarmonic()
+        elif 'pinchharmonic' in tech_lower or tech_lower == 'ph':
+            note.effect.harmonic = gp.PinchHarmonic()
+        elif 'tappedharmonic' in tech_lower or tech_lower == 'th':
+            note.effect.harmonic = gp.TappedHarmonic(fret=note.value + 12)
         elif 'harmonic' in tech_lower or 'harm' in tech_lower:
             note.effect.harmonic = gp.NaturalHarmonic()
         
         # Let Ring
-        elif 'let ring' in tech_lower or 'ring' in tech_lower:
+        elif 'letring' in tech_lower or 'ring' in tech_lower:
             note.effect.letRing = True
         
         # Palm Mute
-        elif 'palm' in tech_lower or 'mute' in tech_lower or tech_lower == 'pm':
+        elif 'palmmute' in tech_lower or tech_lower == 'pm':
             note.effect.palmMute = True
         
         # Staccato
         elif 'staccato' in tech_lower:
             note.effect.staccato = True
+        
+        # Ghost Note
+        elif 'ghost' in tech_lower:
+            note.effect.ghostNote = True
+        
+        # Accentuated
+        elif 'accent' in tech_lower:
+            note.effect.accentuatedNote = True
+        
+        # Dead Note (muted X)
+        elif 'dead' in tech_lower or 'mute' in tech_lower:
+            note.type = gp.NoteType.dead
 
 
 # Quick test
