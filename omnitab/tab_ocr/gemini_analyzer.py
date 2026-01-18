@@ -13,7 +13,6 @@ Usage:
 
 import os
 import json
-import base64
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -27,8 +26,10 @@ try:
 except ImportError:
     pass  # dotenv not installed, use os.environ only
 
+# Use new google.genai SDK (the old google.generativeai is deprecated)
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
@@ -88,18 +89,18 @@ Analyze this TAB image now:"""
             api_key: Google AI API key. If not provided, uses GEMINI_API_KEY or GOOGLE_API_KEY env var
         """
         if not GEMINI_AVAILABLE:
-            raise ImportError("google-generativeai not installed. Run: pip install google-generativeai")
+            raise ImportError("google-genai not installed. Run: pip install google-genai")
         
         # Check both env var names (GEMINI_API_KEY for consistency with stock-predictor)
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError("API key required. Set GEMINI_API_KEY env var or pass api_key parameter")
         
-        # Model name matching stock-predictor (2025 latest)
-        self.model_name = "models/gemini-2.5-flash"
+        # Model name (2025/2026 latest)
+        self.model_name = "gemini-2.5-flash"
         
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel(self.model_name)
+        # New google.genai SDK uses Client pattern
+        self.client = genai.Client(api_key=self.api_key)
     
     def analyze(self, image_path: str) -> Dict:
         """
@@ -115,7 +116,7 @@ Analyze this TAB image now:"""
         if not image_path.exists():
             raise FileNotFoundError(f"Image not found: {image_path}")
         
-        # Read and encode image
+        # Read image data
         with open(image_path, "rb") as f:
             image_data = f.read()
         
@@ -130,17 +131,14 @@ Analyze this TAB image now:"""
         }
         mime_type = mime_types.get(suffix, "image/png")
         
-        # Create image part for Gemini
-        image_part = {
-            "mime_type": mime_type,
-            "data": image_data
-        }
+        # New google.genai SDK uses types.Part for images
+        image_part = types.Part.from_bytes(data=image_data, mime_type=mime_type)
         
-        # Send to Gemini
-        response = self.model.generate_content([
-            self.ANALYSIS_PROMPT,
-            image_part
-        ])
+        # Send to Gemini using new SDK
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=[self.ANALYSIS_PROMPT, image_part]
+        )
         
         # Parse response
         return self._parse_response(response.text)

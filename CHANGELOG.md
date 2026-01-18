@@ -4,6 +4,54 @@ All notable changes to OmniTab will be documented in this file.
 
 ---
 
+## [0.7.0] - 2026-01-18
+
+### 🔧 Critical Bug Fixes + SDK Migration
+
+#### Fixed
+- **GP5 노트 저장 버그 해결** (핵심 문제!)
+  - 문제: Gemini가 129개 노트를 감지해도 GP5 파일에는 0개가 저장됨
+  - 원인: PyGuitarPro는 `gp.Song()` 생성 시 기본 Track을 자동 생성
+    - 새 Track을 `song.tracks.append()`로 추가하면 2번째가 됨
+    - 저장/로드 후 우리가 만든 measures가 사라짐
+  - 해결: `song.tracks[0]`를 직접 수정하는 방식으로 변경
+  - 결과: 129개 노트가 정상적으로 GP5에 저장됨 ✅
+
+#### Changed  
+- **google.generativeai → google.genai 마이그레이션**
+  - 기존 `google.generativeai` 패키지가 deprecated됨
+  - 새 `google.genai` SDK로 완전 마이그레이션
+  - Client 패턴 사용: `genai.Client(api_key=...)`
+  - types.Part 사용: `types.Part.from_bytes(data=..., mime_type=...)`
+  - FutureWarning 제거 ✅
+
+#### Test Results (After Fix)
+```
+Yellow Jacket - page_1.png:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Before Fix          After Fix
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Notes: 0            Notes: 129  ✅
+Measures: 1         Measures: 6 ✅
+Tracks: 2           Tracks: 1   ✅
+Capo: 0             Capo: 2     ✅
+```
+
+#### Technical Details
+```python
+# 잘못된 방법 (버그)
+track = gp.Track(song)           # 새 트랙 생성
+song.tracks.append(track)        # 2번째 트랙이 됨 → 저장 시 사라짐
+
+# 올바른 방법 (수정됨)
+track = song.tracks[0]           # 기존 트랙 사용
+track.name = "Acoustic Guitar"   # 직접 수정
+track.measures.clear()           # 기존 measures 삭제
+# ... add new measures to track
+```
+
+---
+
 ## [0.6.0] - 2026-01-13
 
 ### 🔪 ScoreSlicer: System & Measure Splitting

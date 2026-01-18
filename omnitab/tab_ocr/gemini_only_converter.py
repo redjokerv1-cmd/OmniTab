@@ -154,23 +154,33 @@ class GeminiOnlyConverter:
         tuning: List[str],
         capo: int
     ) -> gp.Song:
-        """Create GP5 song from Gemini analysis"""
+        """Create GP5 song from Gemini analysis
+        
+        IMPORTANT: PyGuitarPro creates a default track and measure when Song() is called.
+        We must MODIFY the existing track, not create a new one!
+        """
         song = gp.Song()
         song.title = title
         song.artist = "OmniTab (Gemini Only)"
         song.tempo = tempo
         
-        # Add capo info to instructions (since track.offset doesn't persist)
+        # Add capo info to instructions (since track.offset doesn't persist in some cases)
         if capo > 0:
             song.instructions = f"Capo: {capo} fret"
         
-        # Create track
-        track = gp.Track(song)
+        # IMPORTANT: Use existing track (index 0), don't create new one!
+        track = song.tracks[0]
         track.name = "Acoustic Guitar"
         track.channel = self._create_channel()
         track.strings = self._create_strings(tuning)
         track.fretCount = 24
-        track.offset = capo  # Capo setting! This is the correct way
+        track.offset = capo
+        
+        # Clear any existing measures in the track
+        track.measures.clear()
+        
+        # Clear existing measure headers (except we'll replace them)
+        song.measureHeaders.clear()
         
         # Process measures
         for i, m_data in enumerate(measures_data):
@@ -181,7 +191,7 @@ class GeminiOnlyConverter:
             header.timeSignature = gp.TimeSignature(4, gp.Duration(1))
             song.measureHeaders.append(header)
             
-            # Create measure
+            # Create measure for this track
             measure = gp.Measure(track, header)
             
             # Process beats
@@ -192,7 +202,9 @@ class GeminiOnlyConverter:
                 duration_str = b_data.get("duration", "quarter")
                 duration_val = DURATION_TO_GP5.get(duration_str, 0)
                 
-                beat = gp.Beat(measure.voices[0])
+                # Use first voice (index 0)
+                voice = measure.voices[0]
+                beat = gp.Beat(voice)
                 beat.start = current_start
                 beat.duration = gp.Duration(value=2**abs(duration_val) if duration_val <= 0 else 2**duration_val)
                 
@@ -242,7 +254,7 @@ class GeminiOnlyConverter:
                 else:
                     beat.status = gp.BeatStatus.rest
                 
-                measure.voices[0].beats.append(beat)
+                voice.beats.append(beat)
                 current_start += 960  # Quarter note default
             
             # Ensure at least one beat
@@ -267,7 +279,6 @@ class GeminiOnlyConverter:
             measure.voices[0].beats.append(rest)
             track.measures.append(measure)
         
-        song.tracks.append(track)
         return song
     
     def _create_channel(self) -> gp.MidiChannel:
