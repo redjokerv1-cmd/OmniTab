@@ -13,7 +13,39 @@ Usage:
 """
 
 import argparse
+import sys
+import os
 from pathlib import Path
+
+# Windows Unicode 출력 문제 해결 - tqdm 패치
+if sys.platform == 'win32':
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    
+    # tqdm을 ASCII 모드로 강제 패치
+    try:
+        from tqdm import tqdm as _tqdm
+        from functools import partial
+        import tqdm as tqdm_module
+        
+        # ASCII 전용 tqdm 래퍼
+        class ASCIITqdm(_tqdm):
+            def __init__(self, *args, **kwargs):
+                kwargs['ascii'] = True
+                kwargs['ncols'] = 100
+                super().__init__(*args, **kwargs)
+        
+        # 전역 패치
+        tqdm_module.tqdm = ASCIITqdm
+        tqdm_module.std.tqdm = ASCIITqdm
+    except ImportError:
+        pass
+    
+    # Windows 콘솔 UTF-8 설정
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+    except:
+        pass
 
 
 def train_yolo(data_yaml: str, epochs: int = 100, batch_size: int = 16, 
@@ -30,6 +62,20 @@ def train_yolo(data_yaml: str, epochs: int = 100, batch_size: int = 16,
     """
     try:
         from ultralytics import YOLO
+        # Windows에서 진행바 깨짐 방지 - ultralytics 내부 tqdm 패치
+        if sys.platform == 'win32':
+            try:
+                import ultralytics.utils as ul_utils
+                from tqdm import tqdm
+                # ASCII 모드 tqdm으로 교체
+                original_tqdm = tqdm
+                def ascii_tqdm(*args, **kwargs):
+                    kwargs['ascii'] = ' >=]'
+                    kwargs['ncols'] = 120
+                    return original_tqdm(*args, **kwargs)
+                ul_utils.TQDM = ascii_tqdm
+            except Exception as e:
+                print(f"[Warning] tqdm patch failed: {e}")
     except ImportError:
         print("Error: ultralytics not installed!")
         print("Run: pip install ultralytics")
@@ -56,6 +102,7 @@ def train_yolo(data_yaml: str, epochs: int = 100, batch_size: int = 16,
         patience=20,  # Early stopping
         save=True,
         plots=True,
+        verbose=False,  # 진행바 비활성화 (Windows 터미널 호환성)
     )
     
     print(f"\n[Train] Complete!")
