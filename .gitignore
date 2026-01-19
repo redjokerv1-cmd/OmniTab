@@ -75,3 +75,7 @@ runs/
 
 # Debug files
 debug_*.png
+test_yolo_result.png
+
+# YOLO pretrained models (large files)
+*.pt

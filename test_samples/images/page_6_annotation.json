@@ -1,0 +1,7 @@
+{
+  "image": "test_samples\\images\\page_6.png",
+  "width": 1190,
+  "height": 1684,
+  "annotations": [],
+  "source": "gemini_auto_labeler"
+}
